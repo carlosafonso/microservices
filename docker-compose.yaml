@@ -1,0 +1,18 @@
+version: "3"
+services:
+  frontend:
+    build: ./src/frontend
+    ports:
+      - "9876:8080"
+  font_color:
+    build: ./src/font-color
+    ports:
+      - "9875:8080"
+  font_size:
+    build: ./src/font-size
+    ports:
+      - "9874:8080"
+  word:
+    build: ./src/word
+    ports:
+      - "9873:80"
