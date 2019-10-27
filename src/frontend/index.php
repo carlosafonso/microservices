@@ -1,8 +1,8 @@
 <?php
 
-$wordResponse = file_get_contents('http://word:80');
-$colorResponse = file_get_contents('http://font_color:8080');
-$sizeResponse = file_get_contents('http://font_size:8080');
+$wordResponse = file_get_contents('http://' . getenv('WORD_SVC'));
+$colorResponse = file_get_contents('http://' . getenv('FONT_COLOR_SVC'));
+$sizeResponse = file_get_contents('http://' . getenv('FONT_SIZE_SVC'));
 
 $word = json_decode($wordResponse);
 $color = json_decode($colorResponse);
