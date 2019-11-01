@@ -13,6 +13,7 @@ const MAX_SIZE = 90;
 const app = express();
 app.get('/', (req, res) => {
   let size = MIN_SIZE + Math.floor(Math.random() * Math.floor(MAX_SIZE - MIN_SIZE));
+  console.log(`Selected size is ${size}`);
   res.send({size: size});
 });
 

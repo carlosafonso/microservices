@@ -12,6 +12,7 @@ const COLORS = ['blue', 'red', 'green', 'magenta', 'orange'];
 const app = express();
 app.get('/', (req, res) => {
   let color = COLORS[Math.floor(Math.random() * COLORS.length)];
+  console.log(`Selected size is ${color}`);
   res.send({color: color});
 });
 
