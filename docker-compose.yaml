@@ -20,3 +20,5 @@ services:
     build: ./src/word
     ports:
       - "9873:80"
+    environment:
+      - RANDOM_ERROR_PROBABILITY=0.5
