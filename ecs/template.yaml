@@ -182,6 +182,79 @@ Resources:
   #
   # Section: Monitoring and Logging
   #
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardBody: !Sub |
+        {
+          "start": "-PT3H",
+          "periodOverride": "auto",
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${ALB.LoadBalancerFullName}", { "stat": "p90" } ],
+                  [ "...", { "stat": "p95" } ],
+                  [ "..." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "p99",
+                "period": 60,
+                "liveData": false,
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "p90 > 50ms",
+                      "value": 0.200
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 7,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${ALB.LoadBalancerFullName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            },
+            {
+              "type": "metric",
+              "x": 13,
+              "y": 7,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", "${ALB.LoadBalancerFullName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            }
+          ]
+        }
+
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
