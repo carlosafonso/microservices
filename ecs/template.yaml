@@ -265,6 +265,7 @@ Resources:
           MemoryReservation: 512
           PortMappings:
             - ContainerPort: 8080
+          StopTimeout: 5
       Cpu: 256
       Memory: 512
       ExecutionRoleArn: !Ref TaskExecutionRole
@@ -315,6 +316,7 @@ Resources:
           MemoryReservation: 512
           PortMappings:
             - ContainerPort: 8080
+          StopTimeout: 5
       Cpu: 256
       Memory: 512
       ExecutionRoleArn: !Ref TaskExecutionRole
@@ -365,6 +367,7 @@ Resources:
           MemoryReservation: 512
           PortMappings:
             - ContainerPort: 80
+          StopTimeout: 5
       Cpu: 256
       Memory: 512
       ExecutionRoleArn: !Ref TaskExecutionRole
@@ -411,6 +414,7 @@ Resources:
           MemoryReservation: 512
           PortMappings:
             - ContainerPort: 8080
+          StopTimeout: 5
       Cpu: 256
       Memory: 512
       ExecutionRoleArn: !Ref TaskExecutionRole
@@ -440,7 +444,6 @@ Resources:
   #
   # End of Section: ECS
   #
-
 Outputs:
   FrontendUrl:
     Description: The URL to the Application Load Balancer fronting the cluster.
