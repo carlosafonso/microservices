@@ -262,7 +262,7 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: font-color
-          MemoryReservation: 256
+          MemoryReservation: 512
           PortMappings:
             - ContainerPort: 8080
       Cpu: 256
@@ -312,7 +312,7 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: font-size
-          MemoryReservation: 256
+          MemoryReservation: 512
           PortMappings:
             - ContainerPort: 8080
       Cpu: 256
@@ -362,7 +362,7 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: word
-          MemoryReservation: 256
+          MemoryReservation: 512
           PortMappings:
             - ContainerPort: 80
       Cpu: 256
@@ -408,7 +408,7 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: frontend
-          MemoryReservation: 256
+          MemoryReservation: 512
           PortMappings:
             - ContainerPort: 8080
       Cpu: 256
