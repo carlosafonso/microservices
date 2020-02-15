@@ -16,6 +16,8 @@ Resources:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 192.168.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
 
   IGW:
     Type: AWS::EC2::InternetGateway
@@ -165,6 +167,12 @@ Resources:
   #
   # Section: ECS
   #
+  ServiceRegistryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: microservices
+      Vpc: !Ref VPC
+
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -204,6 +212,17 @@ Resources:
     Properties:
       ClusterName: microservices
 
+  FontColorServiceRegistry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      DnsConfig:
+        DnsRecords:
+          - TTL: 15
+            Type: A
+        NamespaceId: !Ref ServiceRegistryNamespace
+        RoutingPolicy: MULTIVALUE
+      Name: font-color
+
   FontColorTaskDef:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -233,7 +252,20 @@ Resources:
           Subnets:
             - !Ref SubnetAPrivate
             - !Ref SubnetBPrivate
+      ServiceRegistries:
+        - RegistryArn: !GetAtt FontColorServiceRegistry.Arn
       TaskDefinition: !Ref FontColorTaskDef
+
+  FontSizeServiceRegistry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      DnsConfig:
+        DnsRecords:
+          - TTL: 15
+            Type: A
+        NamespaceId: !Ref ServiceRegistryNamespace
+        RoutingPolicy: MULTIVALUE
+      Name: font-size
 
   FontSizeTaskDef:
     Type: AWS::ECS::TaskDefinition
@@ -264,7 +296,20 @@ Resources:
           Subnets:
             - !Ref SubnetAPrivate
             - !Ref SubnetBPrivate
+      ServiceRegistries:
+        - RegistryArn: !GetAtt FontSizeServiceRegistry.Arn
       TaskDefinition: !Ref FontSizeTaskDef
+
+  WordServiceRegistry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      DnsConfig:
+        DnsRecords:
+          - TTL: 15
+            Type: A
+        NamespaceId: !Ref ServiceRegistryNamespace
+        RoutingPolicy: MULTIVALUE
+      Name: word
 
   WordTaskDef:
     Type: AWS::ECS::TaskDefinition
@@ -295,6 +340,8 @@ Resources:
           Subnets:
             - !Ref SubnetAPrivate
             - !Ref SubnetBPrivate
+      ServiceRegistries:
+        - RegistryArn: !GetAtt WordServiceRegistry.Arn
       TaskDefinition: !Ref WordTaskDef
 
   FrontendTaskDef:
@@ -303,6 +350,13 @@ Resources:
       ContainerDefinitions:
         - Name: frontend
           Image: !Ref FrontendImageUri
+          Environment:
+            - Name: FONT_COLOR_SVC
+              Value: font-color.microservices:8080
+            - Name: FONT_SIZE_SVC
+              Value: font-size.microservices:8080
+            - Name: WORD_SVC
+              Value: word.microservices:80
           MemoryReservation: 256
           PortMappings:
             - ContainerPort: 8080
