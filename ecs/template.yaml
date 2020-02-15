@@ -398,3 +398,8 @@ Resources:
   #
   # End of Section: ECS
   #
+
+Outputs:
+  FrontendUrl:
+    Description: The URL to the Application Load Balancer fronting the cluster.
+    Value: !Join ['', ['http://', !GetAtt ALB.DNSName]]
