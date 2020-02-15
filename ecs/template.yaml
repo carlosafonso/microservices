@@ -7,6 +7,12 @@ Parameters:
     Type: String
   FrontendImageUri:
     Type: String
+  LogRetentionPeriod:
+    Type: Number
+    Default: 14
+    # We are allowing some of the values supported by AWS::Logs::LogGroup.
+    # See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90]
 
 Resources:
   #
@@ -180,7 +186,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: /microservices
-      RetentionInDays: 14
+      RetentionInDays: !Ref LogRetentionPeriod
   #
   # End of Section: Monitoring and Logging
   #
