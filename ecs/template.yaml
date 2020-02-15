@@ -1,0 +1,337 @@
+Parameters:
+  FontColorImageUri:
+    Type: String
+  FontSizeImageUri:
+    Type: String
+  WordImageUri:
+    Type: String
+  FrontendImageUri:
+    Type: String
+
+Resources:
+  #
+  # Section: Network
+  #
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 192.168.0.0/16
+
+  IGW:
+    Type: AWS::EC2::InternetGateway
+
+  IGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+
+  SubnetAPublic:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-1a
+      CidrBlock: 192.168.0.0/24
+      VpcId: !Ref VPC
+
+  SubnetAPrivate:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-1a
+      CidrBlock: 192.168.1.0/24
+      VpcId: !Ref VPC
+
+  SubnetBPublic:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-1b
+      CidrBlock: 192.168.2.0/24
+      VpcId: !Ref VPC
+
+  SubnetBPrivate:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-1b
+      CidrBlock: 192.168.3.0/24
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  RouteToInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+      RouteTableId: !Ref PublicRouteTable
+
+  RouteToInternetAssociationSubnetA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref SubnetAPublic
+
+  RouteToInternetAssociationSubnetB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref SubnetBPublic
+
+  NatGatewayEIP:
+   Type: AWS::EC2::EIP
+   DependsOn: IGWAttachment
+   Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref SubnetAPublic
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  RouteToNatGateway:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+      RouteTableId: !Ref PrivateRouteTable
+
+  RouteToNatGatewayAssociationSubnetAPrivate:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref SubnetAPrivate
+
+  RouteToNatGatewayAssociationSubnetBPrivate:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref SubnetBPrivate
+  #
+  # End of Section: Network
+  #
+
+  #
+  # Section: Load Balancers
+  #
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the frontend ALB
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+      VpcId: !Ref VPC
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - !Ref SubnetAPublic
+        - !Ref SubnetBPublic
+      Type: application
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref VPC
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+  #
+  # End of Section: Load Balancers
+  #
+
+  #
+  # Section: ECS
+  #
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  ClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to be used within the cluster
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref ALBSecurityGroup
+          IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          Description: Traffic from the ALB
+      VpcId: !Ref VPC
+
+  ClusterSecurityGroupSelfIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ClusterSecurityGroup
+      SourceSecurityGroupId: !Ref ClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      Description: Traffic from the other services
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: microservices
+
+  FontColorTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: font-color
+          Image: !Ref FontColorImageUri
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 8080
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref TaskExecutionRole
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  FontColorService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !GetAtt Cluster.Arn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroup
+          Subnets:
+            - !Ref SubnetAPrivate
+            - !Ref SubnetBPrivate
+      TaskDefinition: !Ref FontColorTaskDef
+
+  FontSizeTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: font-size
+          Image: !Ref FontSizeImageUri
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 8080
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref TaskExecutionRole
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  FontSizeService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !GetAtt Cluster.Arn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroup
+          Subnets:
+            - !Ref SubnetAPrivate
+            - !Ref SubnetBPrivate
+      TaskDefinition: !Ref FontSizeTaskDef
+
+  WordTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: word
+          Image: !Ref WordImageUri
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 80
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref TaskExecutionRole
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  WordService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !GetAtt Cluster.Arn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroup
+          Subnets:
+            - !Ref SubnetAPrivate
+            - !Ref SubnetBPrivate
+      TaskDefinition: !Ref WordTaskDef
+
+  FrontendTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: frontend
+          Image: !Ref FrontendImageUri
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 8080
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref TaskExecutionRole
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  FrontendService:
+    Type: AWS::ECS::Service
+    DependsOn: ALB
+    Properties:
+      Cluster: !GetAtt Cluster.Arn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: frontend
+          ContainerPort: 8080
+          TargetGroupArn: !Ref ALBTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroup
+          Subnets:
+            - !Ref SubnetAPrivate
+            - !Ref SubnetBPrivate
+      TaskDefinition: !Ref FrontendTaskDef
+  #
+  # End of Section: ECS
+  #
