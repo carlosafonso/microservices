@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: carlosafonso/microservices-frontend
+        ports:
+        - containerPort: 8080
+        env:
+          - name: FONT_COLOR_SVC
+            value: font-color
+          - name: FONT_SIZE_SVC
+            value: font-size
+          - name: WORD_SVC
+            value: word
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  type: LoadBalancer
+  ports:
+   -  protocol: TCP
+      port: 80
+      targetPort: 8080
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: frontend
+# spec:
+#   selector:
+#     app: frontend
+#   type: NodePort
+#   ports:
+#    -  protocol: TCP
+#       port: 80
+#       targetPort: 8080
+# ---
+# apiVersion: extensions/v1beta1
+# kind: Ingress
+# metadata:
+#   name: frontend
+#   annotations:
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/scheme: internet-facing
+#   labels:
+#     app: frontend
+# spec:
+#   rules:
+#     - http:
+#         paths:
+#           - path: /*
+#             backend:
+#               serviceName: frontend
+#               servicePort: 80

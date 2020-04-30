@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: font-size
+spec:
+  selector:
+    matchLabels:
+      app: font-size
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: font-size
+    spec:
+      containers:
+      - name: font-size
+        image: carlosafonso/microservices-font-size
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: font-size
+spec:
+  selector:
+    app: font-size
+  type: ClusterIP
+  ports:
+   -  protocol: TCP
+      port: 80
+      targetPort: 8080
