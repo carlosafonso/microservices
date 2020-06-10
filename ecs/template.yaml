@@ -37,28 +37,40 @@ Resources:
   SubnetAPublic:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-1a
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 192.168.0.0/24
       VpcId: !Ref VPC
 
   SubnetAPrivate:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-1a
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 192.168.1.0/24
       VpcId: !Ref VPC
 
   SubnetBPublic:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-1b
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 192.168.2.0/24
       VpcId: !Ref VPC
 
   SubnetBPrivate:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: eu-west-1b
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: !Ref AWS::Region
       CidrBlock: 192.168.3.0/24
       VpcId: !Ref VPC
 
