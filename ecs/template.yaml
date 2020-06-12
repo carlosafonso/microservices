@@ -223,7 +223,7 @@ Resources:
                 "annotations": {
                   "horizontal": [
                     {
-                      "label": "p90 > 50ms",
+                      "label": "p90 > 200ms",
                       "value": 0.200
                     }
                   ]
