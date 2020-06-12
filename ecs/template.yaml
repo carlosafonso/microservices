@@ -614,11 +614,13 @@ Resources:
         Type: CODEPIPELINE
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: REPOSITORY_URI
+            Type: PLAINTEXT
+            Value: !Select [0, !Split [':', !Ref FrontendImageUri]]
         Image: aws/codebuild/standard:1.0
-        # ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
         Type: LINUX_CONTAINER
-      # LogsConfig: ~
       ServiceRole: !Ref CodeBuildServiceRole
       Source:
         Type: CODEPIPELINE
@@ -700,7 +702,7 @@ Resources:
               InputArtifacts:
                 - Name: Source
               OutputArtifacts:
-                - Name: BuildArtifact
+                - Name: Build
         - Name: Deploy
           Actions:
             - Name: Deploy
@@ -713,7 +715,7 @@ Resources:
                 ClusterName: !Ref Cluster
                 ServiceName: !Ref FrontendService
               InputArtifacts:
-                - Name: BuildArtifact
+                - Name: Build
 
   #
   # End of Section: Continuous Deployment
