@@ -161,7 +161,24 @@ Resources:
         - !Ref SubnetBPublic
       Type: application
 
-  ALBTargetGroup:
+  ALBTargetGroupBlue:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 5
+      TargetType: ip
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VPC
+
+  ALBTargetGroupGreen:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 10
@@ -183,7 +200,7 @@ Resources:
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref ALBTargetGroup
+          TargetGroupArn: !Ref ALBTargetGroupBlue
       LoadBalancerArn: !Ref ALB
       Port: 80
       Protocol: HTTP
@@ -512,12 +529,14 @@ Resources:
     DependsOn: ALB
     Properties:
       Cluster: !GetAtt Cluster.Arn
+      DeploymentController:
+        Type: ECS
       DesiredCount: 1
       LaunchType: FARGATE
       LoadBalancers:
         - ContainerName: frontend
           ContainerPort: 8080
-          TargetGroupArn: !Ref ALBTargetGroup
+          TargetGroupArn: !Ref ALBTargetGroupBlue
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups:
@@ -526,8 +545,178 @@ Resources:
             - !Ref SubnetAPrivate
             - !Ref SubnetBPrivate
       TaskDefinition: !Ref FrontendTaskDef
+
+  # FrontendBlueTaskSet:
+  #   Type: AWS::ECS::TaskSet
+  #   Properties:
+  #     Cluster: !Ref Cluster
+  #     LaunchType: FARGATE
+  #     NetworkConfiguration:
+  #       AwsVpcConfiguration:
+  #         AssignPublicIp: DISABLED
+  #         SecurityGroups:
+  #           - !Ref ClusterSecurityGroup
+  #         Subnets:
+  #           - !Ref SubnetAPrivate
+  #           - !Ref SubnetBPrivate
+  #     PlatformVersion: 1.3.0
+  #     Scale:
+  #       Unit: PERCENT
+  #       Value: 1
+  #     Service: !Ref FrontendService
+  #     TaskDefinition: !Ref FrontendTaskDef
+  #     LoadBalancers:
+  #       - ContainerName: frontend
+  #         ContainerPort: 8080
+  #         TargetGroupArn: !Ref ALBTargetGroupBlue
+
+  # PrimaryTaskSet:
+  #   Type: AWS::ECS::PrimaryTaskSet
+  #   Properties:
+  #     Cluster: !Ref Cluster
+  #     Service: !Ref FrontendService
+  #     TaskSetId: !GetAtt FrontendBlueTaskSet.Id
   #
   # End of Section: ECS
+  #
+
+  #
+  # Section: Continuous Deployment
+  #
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+
+  ECRRepository:
+    Type: AWS::ECR::Repository
+
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: frontend
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        ArtifactIdentifier: TheArtifact
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:1.0
+        # ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: true
+        Type: LINUX_CONTAINER
+      # LogsConfig: ~
+      ServiceRole: !Ref CodeBuildServiceRole
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: src/frontend/buildspec.yaml
+
+  # CodeDeployServiceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: codedeploy.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/AdministratorAccess
+
+  # CodeDeployApplication:
+  #   Type: AWS::CodeDeploy::Application
+  #   Properties:
+  #     ComputePlatform: ECS
+
+  # CodeDeployDeploymentGroup:
+  #   Type: AWS::CodeDeploy::DeploymentGroup
+  #   Properties:
+  #     ApplicationName: !Ref CodeDeployApplication
+  #     DeploymentConfigName: CodeDeployDefault.ECSAllAtOnce
+  #     DeploymentStyle:
+  #       DeploymentOption: WITHOUT_TRAFFIC_CONTROL
+  #       DeploymentType: IN_PLACE
+  #     LoadBalancerInfo:
+  #       TargetGroupInfoList:
+  #         - Name: !Ref ALBTargetGroupBlue
+  #     ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodePipelinePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Location: !Ref ArtifactStoreBucket
+        Type: S3
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: 1
+              Configuration:
+                RepositoryName: !GetAtt CodeCommitRepository.Name
+                BranchName: master
+              OutputArtifacts:
+                - Name: Source
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              InputArtifacts:
+                - Name: Source
+              OutputArtifacts:
+                - Name: BuildArtifact
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: ECS
+                Version: 1
+              Configuration:
+                ClusterName: !Ref Cluster
+                ServiceName: !Ref FrontendService
+              InputArtifacts:
+                - Name: BuildArtifact
+
+  #
+  # End of Section: Continuous Deployment
   #
 Outputs:
   FrontendUrl:
