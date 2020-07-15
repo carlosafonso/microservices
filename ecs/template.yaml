@@ -1,12 +1,16 @@
 Parameters:
   FontColorImageUri:
     Type: String
+    Default: carlosafonso/microservices-font-color
   FontSizeImageUri:
     Type: String
+    Default: carlosafonso/microservices-font-size
   WordImageUri:
     Type: String
+    Default: carlosafonso/microservices-word
   FrontendImageUri:
     Type: String
+    Default: carlosafonso/microservices-frontend
   LogRetentionPeriod:
     Type: Number
     Default: 14
