@@ -394,7 +394,7 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
       Cluster: !GetAtt Cluster.Arn
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
@@ -445,7 +445,7 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
       Cluster: !GetAtt Cluster.Arn
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
@@ -496,7 +496,7 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
       Cluster: !GetAtt Cluster.Arn
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
@@ -546,7 +546,7 @@ Resources:
       Cluster: !GetAtt Cluster.Arn
       DeploymentController:
         Type: ECS
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       LoadBalancers:
         - ContainerName: frontend
