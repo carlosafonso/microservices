@@ -238,7 +238,7 @@ Resources:
               "type": "metric",
               "x": 0,
               "y": 0,
-              "width": 24,
+              "width": 12,
               "height": 6,
               "properties": {
                 "metrics": [
@@ -257,6 +257,47 @@ Resources:
                     {
                       "label": "p90 > 200ms",
                       "value": 0.200
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 13,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Average Service CPUUtilization",
+                "metrics": [
+                  [ "AWS/ECS", "CPUUtilization", "ClusterName", "${Cluster}", "ServiceName", "${FrontendService.Name}", { "stat": "Average" } ],
+                  [ ".", ".", ".", ".", ".", "${FontColorService.Name}", { "stat": "Average" } ],
+                  [ ".", ".", ".", ".", ".", "${FontSizeService.Name}", { "stat": "Average" } ],
+                  [ ".", ".", ".", ".", ".", "${WordService.Name}", { "stat": "Average" } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "p99",
+                "period": 60,
+                "liveData": false,
+                "yAxis": {
+                  "left": {
+                    "min": 0,
+                    "max": 100
+                  }
+                },
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "Service Scale Up",
+                      "value": 30
+                    },
+                    {
+                      "label": "Service Scale Down",
+                      "value": 15,
+                      "color": "#77b300"
                     }
                   ]
                 }
@@ -304,6 +345,158 @@ Resources:
     Properties:
       LogGroupName: /microservices
       RetentionInDays: !Ref LogRetentionPeriod
+
+  FontColorSvcHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FontColorSvcScaleUpPolicy
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt FontColorService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 30
+
+  FontColorSvcLowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FontColorSvcScaleDownPolicy
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt FontColorService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 15
+
+  FontSizeSvcHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FontSizeSvcScaleUpPolicy
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt FontSizeService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 30
+
+  FontSizeSvcLowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FontSizeSvcScaleDownPolicy
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt FontSizeService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 15
+
+  WordSvcHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref WordSvcScaleUpPolicy
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt WordService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 30
+
+  WordSvcLowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref WordSvcScaleDownPolicy
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt WordService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 15
+
+  FrontendSvcHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FrontendSvcScaleUpPolicy
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt FrontendService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 30
+
+  FrontendSvcLowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FrontendSvcScaleDownPolicy
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt FrontendService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 15
   #
   # End of Section: Monitoring and Logging
   #
@@ -591,6 +784,142 @@ Resources:
   #     Cluster: !Ref Cluster
   #     Service: !Ref FrontendService
   #     TaskSetId: !GetAtt FrontendBlueTaskSet.Id
+
+  FontColorSvcScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${Cluster}/${FontColorService.Name}
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  FontColorSvcScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FontColorSvcScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FontColorSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 2
+
+  FontColorSvcScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FontColorSvcScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FontColorSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
+
+  FontSizeSvcScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${Cluster}/${FontSizeService.Name}
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  FontSizeSvcScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FontSizeSvcScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FontSizeSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 2
+
+  FontSizeSvcScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FontSizeSvcScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FontSizeSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
+
+  WordSvcScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${Cluster}/${WordService.Name}
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  WordSvcScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WordSvcScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref WordSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 2
+
+  WordSvcScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WordSvcScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref WordSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
+
+  FrontendSvcScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${Cluster}/${FrontendService.Name}
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  FrontendSvcScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FrontendSvcScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FrontendSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 2
+
+  FrontendSvcScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FrontendSvcScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FrontendSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
   #
   # End of Section: ECS
   #
