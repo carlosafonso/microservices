@@ -17,12 +17,6 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group to be used in the automation EC2 instance
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          Description: SSH from everywhere
       VpcId: !Ref VpcId
 
   AutomationInstanceRole:

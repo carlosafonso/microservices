@@ -164,7 +164,7 @@ Resources:
         CodeCommitRepositoryArn: !GetAtt PipelineStack.Outputs.CodeCommitRepositoryArn
         CodeCommitRepositoryName: !GetAtt PipelineStack.Outputs.CodeCommitRepositoryName
         SourceRepo: !Ref SourceRepo
-        SubnetId: !GetAtt NetworkStack.Outputs.PublicSubnetAId
+        SubnetId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
         VpcId: !GetAtt NetworkStack.Outputs.VpcId
   #
   # End of Section: Automation
