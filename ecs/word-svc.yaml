@@ -1,0 +1,147 @@
+Parameters:
+  ClusterArn:
+    Type: String
+  ClusterName:
+    Type: String
+  ClusterSecurityGroupId:
+    Type: String
+  WordImageUri:
+    Type: String
+  LogGroup:
+    Type: String
+  PrivateSubnetAId:
+    Type: String
+  PrivateSubnetBId:
+    Type: String
+  ServiceRegistryNamespaceId:
+    Type: String
+  TaskExecutionRoleArn:
+    Type: String
+
+Resources:
+  WordServiceRegistry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      DnsConfig:
+        DnsRecords:
+          - TTL: 15
+            Type: A
+        NamespaceId: !Ref ServiceRegistryNamespaceId
+        RoutingPolicy: MULTIVALUE
+      Name: word
+
+  WordTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: word
+          Image: !Ref WordImageUri
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: word
+          MemoryReservation: 512
+          PortMappings:
+            - ContainerPort: 80
+          StopTimeout: 5
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref TaskExecutionRoleArn
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  WordService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ClusterArn
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroupId
+          Subnets:
+            - !Ref PrivateSubnetAId
+            - !Ref PrivateSubnetBId
+      ServiceRegistries:
+        - RegistryArn: !GetAtt WordServiceRegistry.Arn
+      TaskDefinition: !Ref WordTaskDef
+
+  WordSvcScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${ClusterName}/${WordService.Name}
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  WordSvcScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WordSvcScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref WordSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 2
+
+  WordSvcScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WordSvcScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref WordSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
+
+  WordSvcHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref WordSvcScaleUpPolicy
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ClusterName
+        - Name: ServiceName
+          Value: !GetAtt WordService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 30
+
+  WordSvcLowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref WordSvcScaleDownPolicy
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ClusterName
+        - Name: ServiceName
+          Value: !GetAtt WordService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 15
+
+Outputs:
+  ServiceName:
+    Value: !GetAtt WordService.Name

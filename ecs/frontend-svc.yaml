@@ -1,0 +1,182 @@
+Parameters:
+  ALBBlueTargetGroupArn:
+    Type: String
+  ClusterArn:
+    Type: String
+  ClusterName:
+    Type: String
+  ClusterSecurityGroupId:
+    Type: String
+  FrontendImageUri:
+    Type: String
+  LogGroup:
+    Type: String
+  PrivateSubnetAId:
+    Type: String
+  PrivateSubnetBId:
+    Type: String
+  TaskExecutionRoleArn:
+    Type: String
+
+Resources:
+  FrontendTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: frontend
+          Image: !Ref FrontendImageUri
+          Environment:
+            - Name: FONT_COLOR_SVC
+              Value: font-color.microservices:8080
+            - Name: FONT_SIZE_SVC
+              Value: font-size.microservices:8080
+            - Name: WORD_SVC
+              Value: word.microservices:80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: frontend
+          MemoryReservation: 512
+          PortMappings:
+            - ContainerPort: 8080
+          StopTimeout: 5
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref TaskExecutionRoleArn
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+
+  FrontendService:
+    Type: AWS::ECS::Service
+    # This resource depends on the ALB. However, since it is now in a separate
+    # stack, we're receiving the Target Group ARN as a parameter, which
+    # essentially accomplishes the same thing. See:
+    # https://stackoverflow.com/questions/57959202/aws-cloudformation-how-to-dependson-resource-from-another-nested-stack
+    Properties:
+      Cluster: !Ref ClusterArn
+      DeploymentController:
+        Type: ECS
+      DesiredCount: 2
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: frontend
+          ContainerPort: 8080
+          TargetGroupArn: !Ref ALBBlueTargetGroupArn
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups:
+            - !Ref ClusterSecurityGroupId
+          Subnets:
+            - !Ref PrivateSubnetAId
+            - !Ref PrivateSubnetBId
+      TaskDefinition: !Ref FrontendTaskDef
+
+  # FrontendBlueTaskSet:
+  #   Type: AWS::ECS::TaskSet
+  #   Properties:
+  #     Cluster: !GetAtt EcsClusterStack.Outputs.ClusterName
+  #     LaunchType: FARGATE
+  #     NetworkConfiguration:
+  #       AwsVpcConfiguration:
+  #         AssignPublicIp: DISABLED
+  #         SecurityGroups:
+  #           - !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
+  #         Subnets:
+  #           - !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+  #           - !GetAtt NetworkStack.Outputs.PrivateSubnetBId
+  #     PlatformVersion: 1.3.0
+  #     Scale:
+  #       Unit: PERCENT
+  #       Value: 1
+  #     Service: !GetAtt FrontendServiceStack.Outputs.ServiceName
+  #     TaskDefinition: !Ref FrontendTaskDef
+  #     LoadBalancers:
+  #       - ContainerName: frontend
+  #         ContainerPort: 8080
+  #         TargetGroupArn: !GetAtt EcsClusterStack.Outputs.ALBBlueTargetGroupArn
+
+  # PrimaryTaskSet:
+  #   Type: AWS::ECS::PrimaryTaskSet
+  #   Properties:
+  #     Cluster: !GetAtt EcsClusterStack.Outputs.ClusterName
+  #     Service: !GetAtt FrontendServiceStack.Outputs.ServiceName
+  #     TaskSetId: !GetAtt FrontendBlueTaskSet.Id
+
+  FrontendSvcScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${ClusterName}/${FrontendService.Name}
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  FrontendSvcScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FrontendSvcScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FrontendSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 2
+
+  FrontendSvcScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: FrontendSvcScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref FrontendSvcScalableTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
+
+  FrontendSvcHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FrontendSvcScaleUpPolicy
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ClusterName
+        - Name: ServiceName
+          Value: !GetAtt FrontendService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 30
+
+  FrontendSvcLowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref FrontendSvcScaleDownPolicy
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref ClusterName
+        - Name: ServiceName
+          Value: !GetAtt FrontendService.Name
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 60
+      Statistic: Average
+      Threshold: 15
+
+Outputs:
+  ServiceName:
+    Value: !GetAtt FrontendService.Name

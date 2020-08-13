@@ -1,0 +1,128 @@
+Parameters:
+  ALBFullName:
+    Type: String
+  ClusterName:
+    Type: String
+  FontColorServiceName:
+    Type: String
+  FontSizeServiceName:
+    Type: String
+  FrontendServiceName:
+    Type: String
+  WordServiceName:
+    Type: String
+
+Resources:
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardBody: !Sub |
+        {
+          "start": "-PT3H",
+          "periodOverride": "auto",
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${ALBFullName}", { "stat": "p90" } ],
+                  [ "...", { "stat": "p95" } ],
+                  [ "..." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "p99",
+                "period": 60,
+                "liveData": false,
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "p90 > 200ms",
+                      "value": 0.200
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 13,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Average Service CPUUtilization",
+                "metrics": [
+                  [ "AWS/ECS", "CPUUtilization", "ClusterName", "${ClusterName}", "ServiceName", "${FrontendServiceName}", { "stat": "Average" } ],
+                  [ ".", ".", ".", ".", ".", "${FontColorServiceName}", { "stat": "Average" } ],
+                  [ ".", ".", ".", ".", ".", "${FontSizeServiceName}", { "stat": "Average" } ],
+                  [ ".", ".", ".", ".", ".", "${WordServiceName}", { "stat": "Average" } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "p99",
+                "period": 60,
+                "liveData": false,
+                "yAxis": {
+                  "left": {
+                    "min": 0,
+                    "max": 100
+                  }
+                },
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "Service Scale Up",
+                      "value": 30
+                    },
+                    {
+                      "label": "Service Scale Down",
+                      "value": 15,
+                      "color": "#77b300"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 7,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${ALBFullName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            },
+            {
+              "type": "metric",
+              "x": 13,
+              "y": 7,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", "${ALBFullName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            }
+          ]
+        }

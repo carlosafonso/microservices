@@ -6,12 +6,23 @@ The current implementation supports Amazon ECS, but a Kubernetes version (hosted
 
 ### How to deploy (Amazon ECS)
 
-Just launch the CloudFormation template located in `ecs/template.yaml`. You can do this from the AWS Management Console, or you could use the CLI as well:
+The infrastructure is defined as a set of nested CloudFormation templates. Just package and deploy the master template located in `ecs/template.yaml`. You can do this easily with the AWS CLI:
 
 ```
+# Create an S3 bucket for storing the processed templates, if you don't have
+# one already (otherwise you can skip this)
+aws s3 mb s3://<your-bucket-name>
+
+# Package all the templates
+aws cloudformation package \
+	--template-file ./ecs/template.yaml \
+	--s3-bucket <your-bucket-name>
+	--output-template-file ./ecs/processed.yaml
+
+# And now deploy them
 aws cloudformation deploy \
 	--stack-name microservices \
-	--template-file ./ecs/template.yaml \
+	--template-file ./ecs/processed.yaml \
 	--parameter-overrides \
 		FontColorImageUri=carlosafonso/microservices-font-color \
 		FontSizeImageUri=carlosafonso/microservices-font-size \

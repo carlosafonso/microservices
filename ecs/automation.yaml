@@ -1,0 +1,105 @@
+Parameters:
+  AL2AmiId:
+    Type: 'AWS::EC2::Image::Id'
+  CodeCommitRepositoryArn:
+    Type: String
+  CodeCommitRepositoryName:
+    Type: String
+  SourceRepo:
+    Type: String
+  SubnetId:
+    Type: String
+  VpcId:
+    Type: String
+
+Resources:
+  AutomationInstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to be used in the automation EC2 instance
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          Description: SSH from everywhere
+      VpcId: !Ref VpcId
+
+  AutomationInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: 'CodeCommitRepoAccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'codecommit:ListRepositoriesForApprovalRuleTemplate'
+                  - 'codecommit:CreateApprovalRuleTemplate'
+                  - 'codecommit:UpdateApprovalRuleTemplateName'
+                  - 'codecommit:GetApprovalRuleTemplate'
+                  - 'codecommit:ListApprovalRuleTemplates'
+                  - 'codecommit:DeleteApprovalRuleTemplate'
+                  - 'codecommit:ListRepositories'
+                  - 'codecommit:UpdateApprovalRuleTemplateContent'
+                  - 'codecommit:UpdateApprovalRuleTemplateDescription'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'codecommit:*'
+                Resource: !Ref CodeCommitRepositoryArn
+        - PolicyName: 'SessionsManagerPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:UpdateInstanceInformation'
+                  - 'ssmmessages:CreateControlChannel'
+                  - 'ssmmessages:CreateDataChannel'
+                  - 'ssmmessages:OpenControlChannel'
+                  - 'ssmmessages:OpenDataChannel'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 's3:GetEncryptionConfiguration'
+                Resource: '*'
+
+  AutomationInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref AutomationInstanceRole]
+
+  AutomationInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AL2AmiId
+      IamInstanceProfile: !Ref AutomationInstanceProfile
+      InstanceType: m5.large
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref AutomationInstanceSecurityGroup
+          SubnetId: !Ref SubnetId
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            set -euxo pipefail
+            sudo yum update -y
+            sudo yum install -y git
+            curl -O https://bootstrap.pypa.io/get-pip.py
+            python get-pip.py
+            pip install git-remote-codecommit
+            git clone ${SourceRepo}
+            cd microservices
+            git remote add codecommit codecommit::${AWS::Region}://${CodeCommitRepositoryName}
+            git fetch --all
+            git push -f -u codecommit master

@@ -30,1033 +30,124 @@ Resources:
   #
   # Section: Network
   #
-  VPC:
-    Type: AWS::EC2::VPC
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      CidrBlock: 192.168.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-
-  IGW:
-    Type: AWS::EC2::InternetGateway
-
-  IGWAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref IGW
-      VpcId: !Ref VPC
-
-  SubnetAPublic:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 0
-          - Fn::GetAZs: !Ref AWS::Region
-      CidrBlock: 192.168.0.0/24
-      VpcId: !Ref VPC
-
-  SubnetAPrivate:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 0
-          - Fn::GetAZs: !Ref AWS::Region
-      CidrBlock: 192.168.1.0/24
-      VpcId: !Ref VPC
-
-  SubnetBPublic:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 1
-          - Fn::GetAZs: !Ref AWS::Region
-      CidrBlock: 192.168.2.0/24
-      VpcId: !Ref VPC
-
-  SubnetBPrivate:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 1
-          - Fn::GetAZs: !Ref AWS::Region
-      CidrBlock: 192.168.3.0/24
-      VpcId: !Ref VPC
-
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  RouteToInternet:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref IGW
-      RouteTableId: !Ref PublicRouteTable
-
-  RouteToInternetAssociationSubnetA:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref SubnetAPublic
-
-  RouteToInternetAssociationSubnetB:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref SubnetBPublic
-
-  NatGatewayEIP:
-   Type: AWS::EC2::EIP
-   DependsOn: IGWAttachment
-   Properties:
-      Domain: vpc
-
-  NatGateway:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGatewayEIP.AllocationId
-      SubnetId: !Ref SubnetAPublic
-
-  PrivateRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  RouteToNatGateway:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway
-      RouteTableId: !Ref PrivateRouteTable
-
-  RouteToNatGatewayAssociationSubnetAPrivate:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref SubnetAPrivate
-
-  RouteToNatGatewayAssociationSubnetBPrivate:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref SubnetBPrivate
+      TemplateURL: ./network.yaml
   #
   # End of Section: Network
   #
 
   #
-  # Section: Load Balancers
+  # Section: ECS cluster
   #
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  EcsClusterStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      GroupDescription: Security group for the frontend ALB
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-      VpcId: !Ref VPC
+      TemplateURL: ./ecs-cluster.yaml
+      Parameters:
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PublicSubnetAId: !GetAtt NetworkStack.Outputs.PublicSubnetAId
+        PublicSubnetBId: !GetAtt NetworkStack.Outputs.PublicSubnetBId
 
-  ALB:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  FontColorServiceStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      SecurityGroups:
-        - !Ref ALBSecurityGroup
-      Subnets:
-        - !Ref SubnetAPublic
-        - !Ref SubnetBPublic
-      Type: application
+      TemplateURL: ./font-color-svc.yaml
+      Parameters:
+        ClusterArn: !GetAtt EcsClusterStack.Outputs.ClusterArn
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
+        FontColorImageUri: !Ref FontColorImageUri
+        LogGroup: !Ref LogGroup
+        PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+        PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
+        ServiceRegistryNamespaceId: !GetAtt EcsClusterStack.Outputs.ServiceRegistryNamespaceId
+        TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
 
-  ALBTargetGroupBlue:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  FontSizeServiceStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /
-      HealthCheckPort: traffic-port
-      HealthCheckProtocol: HTTP
-      HealthyThresholdCount: 2
-      Port: 80
-      Protocol: HTTP
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: 5
-      TargetType: ip
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref VPC
+      TemplateURL: ./font-size-svc.yaml
+      Parameters:
+        ClusterArn: !GetAtt EcsClusterStack.Outputs.ClusterArn
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
+        FontSizeImageUri: !Ref FontSizeImageUri
+        LogGroup: !Ref LogGroup
+        PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+        PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
+        ServiceRegistryNamespaceId: !GetAtt EcsClusterStack.Outputs.ServiceRegistryNamespaceId
+        TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
 
-  ALBTargetGroupGreen:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  WordServiceStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /
-      HealthCheckPort: traffic-port
-      HealthCheckProtocol: HTTP
-      HealthyThresholdCount: 2
-      Port: 80
-      Protocol: HTTP
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: 5
-      TargetType: ip
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref VPC
+      TemplateURL: ./word-svc.yaml
+      Parameters:
+        ClusterArn: !GetAtt EcsClusterStack.Outputs.ClusterArn
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
+        WordImageUri: !Ref WordImageUri
+        LogGroup: !Ref LogGroup
+        PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+        PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
+        ServiceRegistryNamespaceId: !GetAtt EcsClusterStack.Outputs.ServiceRegistryNamespaceId
+        TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
 
-  ALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
+  FrontendServiceStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref ALBTargetGroupBlue
-      LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
+      TemplateURL: ./frontend-svc.yaml
+      Parameters:
+        ALBBlueTargetGroupArn: !GetAtt EcsClusterStack.Outputs.ALBBlueTargetGroupArn
+        ClusterArn: !GetAtt EcsClusterStack.Outputs.ClusterArn
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
+        FrontendImageUri: !Ref FrontendImageUri
+        LogGroup: !Ref LogGroup
+        PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+        PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
+        TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
   #
-  # End of Section: Load Balancers
+  # End of Section: ECS cluster
   #
 
   #
   # Section: Monitoring and Logging
   #
-  Dashboard:
-    Type: AWS::CloudWatch::Dashboard
+  DashboardsStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      DashboardBody: !Sub |
-        {
-          "start": "-PT3H",
-          "periodOverride": "auto",
-          "widgets": [
-            {
-              "type": "metric",
-              "x": 0,
-              "y": 0,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${ALB.LoadBalancerFullName}", { "stat": "p90" } ],
-                  [ "...", { "stat": "p95" } ],
-                  [ "..." ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "stat": "p99",
-                "period": 60,
-                "liveData": false,
-                "annotations": {
-                  "horizontal": [
-                    {
-                      "label": "p90 > 200ms",
-                      "value": 0.200
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "metric",
-              "x": 13,
-              "y": 0,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "title": "Average Service CPUUtilization",
-                "metrics": [
-                  [ "AWS/ECS", "CPUUtilization", "ClusterName", "${Cluster}", "ServiceName", "${FrontendService.Name}", { "stat": "Average" } ],
-                  [ ".", ".", ".", ".", ".", "${FontColorService.Name}", { "stat": "Average" } ],
-                  [ ".", ".", ".", ".", ".", "${FontSizeService.Name}", { "stat": "Average" } ],
-                  [ ".", ".", ".", ".", ".", "${WordService.Name}", { "stat": "Average" } ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "stat": "p99",
-                "period": 60,
-                "liveData": false,
-                "yAxis": {
-                  "left": {
-                    "min": 0,
-                    "max": 100
-                  }
-                },
-                "annotations": {
-                  "horizontal": [
-                    {
-                      "label": "Service Scale Up",
-                      "value": 30
-                    },
-                    {
-                      "label": "Service Scale Down",
-                      "value": 15,
-                      "color": "#77b300"
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "metric",
-              "x": 0,
-              "y": 7,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${ALB.LoadBalancerFullName}" ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "stat": "Sum",
-                "period": 60
-              }
-            },
-            {
-              "type": "metric",
-              "x": 13,
-              "y": 7,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "metrics": [
-                  [ "AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", "${ALB.LoadBalancerFullName}" ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "stat": "Sum",
-                "period": 60
-              }
-            }
-          ]
-        }
+      TemplateURL: ./dashboards.yaml
+      Parameters:
+        ALBFullName: !GetAtt EcsClusterStack.Outputs.ALBFullName
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        FontColorServiceName: !GetAtt FontColorServiceStack.Outputs.ServiceName
+        FontSizeServiceName: !GetAtt FontSizeServiceStack.Outputs.ServiceName
+        FrontendServiceName: !GetAtt FrontendServiceStack.Outputs.ServiceName
+        WordServiceName: !GetAtt WordServiceStack.Outputs.ServiceName
 
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: /microservices
       RetentionInDays: !Ref LogRetentionPeriod
-
-  FontColorSvcHighCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref FontColorSvcScaleUpPolicy
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt FontColorService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 30
-
-  FontColorSvcLowCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref FontColorSvcScaleDownPolicy
-      ComparisonOperator: LessThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt FontColorService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 15
-
-  FontSizeSvcHighCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref FontSizeSvcScaleUpPolicy
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt FontSizeService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 30
-
-  FontSizeSvcLowCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref FontSizeSvcScaleDownPolicy
-      ComparisonOperator: LessThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt FontSizeService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 15
-
-  WordSvcHighCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref WordSvcScaleUpPolicy
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt WordService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 30
-
-  WordSvcLowCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref WordSvcScaleDownPolicy
-      ComparisonOperator: LessThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt WordService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 15
-
-  FrontendSvcHighCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref FrontendSvcScaleUpPolicy
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt FrontendService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 30
-
-  FrontendSvcLowCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref FrontendSvcScaleDownPolicy
-      ComparisonOperator: LessThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt FrontendService.Name
-      EvaluationPeriods: 1
-      MetricName: CPUUtilization
-      Namespace: AWS/ECS
-      Period: 60
-      Statistic: Average
-      Threshold: 15
   #
   # End of Section: Monitoring and Logging
   #
 
   #
-  # Section: ECS
-  #
-  ServiceRegistryNamespace:
-    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
-    Properties:
-      Name: microservices
-      Vpc: !Ref VPC
-
-  TaskExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-
-  ClusterSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group to be used within the cluster
-      SecurityGroupIngress:
-        - SourceSecurityGroupId: !Ref ALBSecurityGroup
-          IpProtocol: tcp
-          FromPort: 0
-          ToPort: 65535
-          Description: Traffic from the ALB
-      VpcId: !Ref VPC
-
-  ClusterSecurityGroupSelfIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref ClusterSecurityGroup
-      SourceSecurityGroupId: !Ref ClusterSecurityGroup
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      Description: Traffic from the other services
-
-  Cluster:
-    Type: AWS::ECS::Cluster
-    Properties:
-      ClusterName: microservices
-
-  FontColorServiceRegistry:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      DnsConfig:
-        DnsRecords:
-          - TTL: 15
-            Type: A
-        NamespaceId: !Ref ServiceRegistryNamespace
-        RoutingPolicy: MULTIVALUE
-      Name: font-color
-
-  FontColorTaskDef:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      ContainerDefinitions:
-        - Name: font-color
-          Image: !Ref FontColorImageUri
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref LogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: font-color
-          MemoryReservation: 512
-          PortMappings:
-            - ContainerPort: 8080
-          StopTimeout: 5
-      Cpu: 256
-      Memory: 512
-      ExecutionRoleArn: !Ref TaskExecutionRole
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-
-  FontColorService:
-    Type: AWS::ECS::Service
-    Properties:
-      Cluster: !GetAtt Cluster.Arn
-      DesiredCount: 2
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          SecurityGroups:
-            - !Ref ClusterSecurityGroup
-          Subnets:
-            - !Ref SubnetAPrivate
-            - !Ref SubnetBPrivate
-      ServiceRegistries:
-        - RegistryArn: !GetAtt FontColorServiceRegistry.Arn
-      TaskDefinition: !Ref FontColorTaskDef
-
-  FontSizeServiceRegistry:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      DnsConfig:
-        DnsRecords:
-          - TTL: 15
-            Type: A
-        NamespaceId: !Ref ServiceRegistryNamespace
-        RoutingPolicy: MULTIVALUE
-      Name: font-size
-
-  FontSizeTaskDef:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      ContainerDefinitions:
-        - Name: font-size
-          Image: !Ref FontSizeImageUri
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref LogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: font-size
-          MemoryReservation: 512
-          PortMappings:
-            - ContainerPort: 8080
-          StopTimeout: 5
-      Cpu: 256
-      Memory: 512
-      ExecutionRoleArn: !Ref TaskExecutionRole
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-
-  FontSizeService:
-    Type: AWS::ECS::Service
-    Properties:
-      Cluster: !GetAtt Cluster.Arn
-      DesiredCount: 2
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          SecurityGroups:
-            - !Ref ClusterSecurityGroup
-          Subnets:
-            - !Ref SubnetAPrivate
-            - !Ref SubnetBPrivate
-      ServiceRegistries:
-        - RegistryArn: !GetAtt FontSizeServiceRegistry.Arn
-      TaskDefinition: !Ref FontSizeTaskDef
-
-  WordServiceRegistry:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      DnsConfig:
-        DnsRecords:
-          - TTL: 15
-            Type: A
-        NamespaceId: !Ref ServiceRegistryNamespace
-        RoutingPolicy: MULTIVALUE
-      Name: word
-
-  WordTaskDef:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      ContainerDefinitions:
-        - Name: word
-          Image: !Ref WordImageUri
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref LogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: word
-          MemoryReservation: 512
-          PortMappings:
-            - ContainerPort: 80
-          StopTimeout: 5
-      Cpu: 256
-      Memory: 512
-      ExecutionRoleArn: !Ref TaskExecutionRole
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-
-  WordService:
-    Type: AWS::ECS::Service
-    Properties:
-      Cluster: !GetAtt Cluster.Arn
-      DesiredCount: 2
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          SecurityGroups:
-            - !Ref ClusterSecurityGroup
-          Subnets:
-            - !Ref SubnetAPrivate
-            - !Ref SubnetBPrivate
-      ServiceRegistries:
-        - RegistryArn: !GetAtt WordServiceRegistry.Arn
-      TaskDefinition: !Ref WordTaskDef
-
-  FrontendTaskDef:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      ContainerDefinitions:
-        - Name: frontend
-          Image: !Ref FrontendImageUri
-          Environment:
-            - Name: FONT_COLOR_SVC
-              Value: font-color.microservices:8080
-            - Name: FONT_SIZE_SVC
-              Value: font-size.microservices:8080
-            - Name: WORD_SVC
-              Value: word.microservices:80
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref LogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: frontend
-          MemoryReservation: 512
-          PortMappings:
-            - ContainerPort: 8080
-          StopTimeout: 5
-      Cpu: 256
-      Memory: 512
-      ExecutionRoleArn: !Ref TaskExecutionRole
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-
-  FrontendService:
-    Type: AWS::ECS::Service
-    DependsOn: ALB
-    Properties:
-      Cluster: !GetAtt Cluster.Arn
-      DeploymentController:
-        Type: ECS
-      DesiredCount: 2
-      LaunchType: FARGATE
-      LoadBalancers:
-        - ContainerName: frontend
-          ContainerPort: 8080
-          TargetGroupArn: !Ref ALBTargetGroupBlue
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          SecurityGroups:
-            - !Ref ClusterSecurityGroup
-          Subnets:
-            - !Ref SubnetAPrivate
-            - !Ref SubnetBPrivate
-      TaskDefinition: !Ref FrontendTaskDef
-
-  # FrontendBlueTaskSet:
-  #   Type: AWS::ECS::TaskSet
-  #   Properties:
-  #     Cluster: !Ref Cluster
-  #     LaunchType: FARGATE
-  #     NetworkConfiguration:
-  #       AwsVpcConfiguration:
-  #         AssignPublicIp: DISABLED
-  #         SecurityGroups:
-  #           - !Ref ClusterSecurityGroup
-  #         Subnets:
-  #           - !Ref SubnetAPrivate
-  #           - !Ref SubnetBPrivate
-  #     PlatformVersion: 1.3.0
-  #     Scale:
-  #       Unit: PERCENT
-  #       Value: 1
-  #     Service: !Ref FrontendService
-  #     TaskDefinition: !Ref FrontendTaskDef
-  #     LoadBalancers:
-  #       - ContainerName: frontend
-  #         ContainerPort: 8080
-  #         TargetGroupArn: !Ref ALBTargetGroupBlue
-
-  # PrimaryTaskSet:
-  #   Type: AWS::ECS::PrimaryTaskSet
-  #   Properties:
-  #     Cluster: !Ref Cluster
-  #     Service: !Ref FrontendService
-  #     TaskSetId: !GetAtt FrontendBlueTaskSet.Id
-
-  FontColorSvcScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MaxCapacity: 10
-      MinCapacity: 2
-      ResourceId: !Sub service/${Cluster}/${FontColorService.Name}
-      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
-      ScalableDimension: ecs:service:DesiredCount
-      ServiceNamespace: ecs
-
-  FontColorSvcScaleUpPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: FontColorSvcScaleUp
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref FontColorSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalLowerBound: 0
-            ScalingAdjustment: 2
-
-  FontColorSvcScaleDownPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: FontColorSvcScaleDown
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref FontColorSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalUpperBound: 0
-            ScalingAdjustment: -1
-
-  FontSizeSvcScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MaxCapacity: 10
-      MinCapacity: 2
-      ResourceId: !Sub service/${Cluster}/${FontSizeService.Name}
-      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
-      ScalableDimension: ecs:service:DesiredCount
-      ServiceNamespace: ecs
-
-  FontSizeSvcScaleUpPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: FontSizeSvcScaleUp
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref FontSizeSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalLowerBound: 0
-            ScalingAdjustment: 2
-
-  FontSizeSvcScaleDownPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: FontSizeSvcScaleDown
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref FontSizeSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalUpperBound: 0
-            ScalingAdjustment: -1
-
-  WordSvcScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MaxCapacity: 10
-      MinCapacity: 2
-      ResourceId: !Sub service/${Cluster}/${WordService.Name}
-      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
-      ScalableDimension: ecs:service:DesiredCount
-      ServiceNamespace: ecs
-
-  WordSvcScaleUpPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: WordSvcScaleUp
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref WordSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalLowerBound: 0
-            ScalingAdjustment: 2
-
-  WordSvcScaleDownPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: WordSvcScaleDown
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref WordSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalUpperBound: 0
-            ScalingAdjustment: -1
-
-  FrontendSvcScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MaxCapacity: 10
-      MinCapacity: 2
-      ResourceId: !Sub service/${Cluster}/${FrontendService.Name}
-      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
-      ScalableDimension: ecs:service:DesiredCount
-      ServiceNamespace: ecs
-
-  FrontendSvcScaleUpPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: FrontendSvcScaleUp
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref FrontendSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalLowerBound: 0
-            ScalingAdjustment: 2
-
-  FrontendSvcScaleDownPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: FrontendSvcScaleDown
-      PolicyType: StepScaling
-      ScalingTargetId: !Ref FrontendSvcScalableTarget
-      StepScalingPolicyConfiguration:
-        AdjustmentType: ChangeInCapacity
-        StepAdjustments:
-          - MetricIntervalUpperBound: 0
-            ScalingAdjustment: -1
-  #
-  # End of Section: ECS
-  #
-
-  #
   # Section: Continuous Deployment
   #
-  ArtifactStoreBucket:
-    Type: AWS::S3::Bucket
-
-  ECRRepository:
-    Type: AWS::ECR::Repository
-
-  CodeCommitRepository:
-    Type: AWS::CodeCommit::Repository
+  PipelineStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      RepositoryName: frontend
-
-  CodeBuildServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-
-  CodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Artifacts:
-        ArtifactIdentifier: TheArtifact
-        Type: CODEPIPELINE
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        EnvironmentVariables:
-          - Name: REPOSITORY_URI
-            Type: PLAINTEXT
-            Value: !Select [0, !Split [':', !Ref FrontendImageUri]]
-        Image: aws/codebuild/standard:1.0
-        PrivilegedMode: true
-        Type: LINUX_CONTAINER
-      ServiceRole: !Ref CodeBuildServiceRole
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: src/frontend/buildspec.yaml
-
-  # CodeDeployServiceRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             Service: codedeploy.amazonaws.com
-  #           Action: sts:AssumeRole
-  #     ManagedPolicyArns:
-  #       - arn:aws:iam::aws:policy/AdministratorAccess
-
-  # CodeDeployApplication:
-  #   Type: AWS::CodeDeploy::Application
-  #   Properties:
-  #     ComputePlatform: ECS
-
-  # CodeDeployDeploymentGroup:
-  #   Type: AWS::CodeDeploy::DeploymentGroup
-  #   Properties:
-  #     ApplicationName: !Ref CodeDeployApplication
-  #     DeploymentConfigName: CodeDeployDefault.ECSAllAtOnce
-  #     DeploymentStyle:
-  #       DeploymentOption: WITHOUT_TRAFFIC_CONTROL
-  #       DeploymentType: IN_PLACE
-  #     LoadBalancerInfo:
-  #       TargetGroupInfoList:
-  #         - Name: !Ref ALBTargetGroupBlue
-  #     ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
-
-  CodePipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codepipeline.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-
-  CodePipelinePipeline:
-    Type: AWS::CodePipeline::Pipeline
-    Properties:
-      ArtifactStore:
-        Location: !Ref ArtifactStoreBucket
-        Type: S3
-      RoleArn: !GetAtt CodePipelineServiceRole.Arn
-      Stages:
-        - Name: Source
-          Actions:
-            - Name: Source
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Provider: CodeCommit
-                Version: 1
-              Configuration:
-                RepositoryName: !GetAtt CodeCommitRepository.Name
-                BranchName: master
-              OutputArtifacts:
-                - Name: Source
-        - Name: Build
-          Actions:
-            - Name: Build
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Provider: CodeBuild
-                Version: 1
-              Configuration:
-                ProjectName: !Ref CodeBuildProject
-              InputArtifacts:
-                - Name: Source
-              OutputArtifacts:
-                - Name: Build
-        - Name: Deploy
-          Actions:
-            - Name: Deploy
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: ECS
-                Version: 1
-              Configuration:
-                ClusterName: !Ref Cluster
-                ServiceName: !Ref FrontendService
-              InputArtifacts:
-                - Name: Build
+      TemplateURL: ./pipeline.yaml
+      Parameters:
+        EcsClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        FrontendImageUri: !Ref FrontendImageUri
+        FrontendServiceName: !GetAtt FrontendServiceStack.Outputs.ServiceName
   #
   # End of Section: Continuous Deployment
   #
@@ -1064,101 +155,22 @@ Resources:
   #
   # Section: Automation
   #
-  AutomationInstanceSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  AutomationStack:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      GroupDescription: Security group to be used in the automation EC2 instance
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          Description: SSH from everywhere
-      VpcId: !Ref VPC
-
-  AutomationInstanceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: 'CodeCommitRepoAccessPolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'codecommit:ListRepositoriesForApprovalRuleTemplate'
-                  - 'codecommit:CreateApprovalRuleTemplate'
-                  - 'codecommit:UpdateApprovalRuleTemplateName'
-                  - 'codecommit:GetApprovalRuleTemplate'
-                  - 'codecommit:ListApprovalRuleTemplates'
-                  - 'codecommit:DeleteApprovalRuleTemplate'
-                  - 'codecommit:ListRepositories'
-                  - 'codecommit:UpdateApprovalRuleTemplateContent'
-                  - 'codecommit:UpdateApprovalRuleTemplateDescription'
-                Resource: '*'
-              - Effect: 'Allow'
-                Action: 'codecommit:*'
-                Resource: !GetAtt CodeCommitRepository.Arn
-        - PolicyName: 'SessionsManagerPolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'ssm:UpdateInstanceInformation'
-                  - 'ssmmessages:CreateControlChannel'
-                  - 'ssmmessages:CreateDataChannel'
-                  - 'ssmmessages:OpenControlChannel'
-                  - 'ssmmessages:OpenDataChannel'
-                Resource: '*'
-              - Effect: 'Allow'
-                Action: 's3:GetEncryptionConfiguration'
-                Resource: '*'
-
-  AutomationInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: /
-      Roles: [!Ref AutomationInstanceRole]
-
-  AutomationInstance:
-    Type: AWS::EC2::Instance
-    DependsOn: CodeCommitRepository
-    Properties:
-      ImageId: !Ref AL2AmiId
-      IamInstanceProfile: !Ref AutomationInstanceProfile
-      InstanceType: m5.large
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          GroupSet:
-            - !Ref AutomationInstanceSecurityGroup
-          SubnetId: !Ref SubnetAPublic
-      UserData:
-        Fn::Base64:
-          !Sub |
-            #!/bin/bash
-            set -euxo pipefail
-            sudo yum update -y
-            sudo yum install -y git
-            curl -O https://bootstrap.pypa.io/get-pip.py
-            python get-pip.py
-            pip install git-remote-codecommit
-            git clone ${SourceRepo}
-            cd microservices
-            git remote add codecommit codecommit::${AWS::Region}://${CodeCommitRepository.Name}
-            git fetch --all
-            git push -f -u codecommit master
+      TemplateURL: ./automation.yaml
+      Parameters:
+        AL2AmiId: !Ref AL2AmiId
+        CodeCommitRepositoryArn: !GetAtt PipelineStack.Outputs.CodeCommitRepositoryArn
+        CodeCommitRepositoryName: !GetAtt PipelineStack.Outputs.CodeCommitRepositoryName
+        SourceRepo: !Ref SourceRepo
+        SubnetId: !GetAtt NetworkStack.Outputs.PublicSubnetAId
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
   #
   # End of Section: Automation
   #
+
 Outputs:
   FrontendUrl:
     Description: The URL to the Application Load Balancer fronting the cluster.
-    Value: !Join ['', ['http://', !GetAtt ALB.DNSName]]
+    Value: !Join ['', ['http://', !GetAtt EcsClusterStack.Outputs.ALBDNSName]]
