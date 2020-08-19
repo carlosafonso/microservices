@@ -21,7 +21,6 @@ $size = json_decode($sizeResponse);
 
         body {
             display: flex;
-            background-color: cyan;
         }
 
         span.word {
