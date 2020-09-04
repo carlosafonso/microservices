@@ -163,6 +163,7 @@ Resources:
         AL2AmiId: !Ref AL2AmiId
         CodeCommitRepositoryArn: !GetAtt PipelineStack.Outputs.CodeCommitRepositoryArn
         CodeCommitRepositoryName: !GetAtt PipelineStack.Outputs.CodeCommitRepositoryName
+        FrontendServiceEcrRepoName: !GetAtt PipelineStack.Outputs.FrontendServiceEcrRepoName
         SourceRepo: !Ref SourceRepo
         SubnetId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
         VpcId: !GetAtt NetworkStack.Outputs.VpcId

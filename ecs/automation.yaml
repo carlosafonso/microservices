@@ -5,6 +5,8 @@ Parameters:
     Type: String
   CodeCommitRepositoryName:
     Type: String
+  FrontendServiceEcrRepoName:
+    Type: String
   SourceRepo:
     Type: String
   SubnetId:
@@ -63,6 +65,13 @@ Resources:
               - Effect: 'Allow'
                 Action: 's3:GetEncryptionConfiguration'
                 Resource: '*'
+        - PolicyName: 'EcrRepoAccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'ecr:*'
+                Resource: '*'
 
   AutomationInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -88,12 +97,41 @@ Resources:
             #!/bin/bash
             set -euxo pipefail
             sudo yum update -y
+
+            #
+            # Make an initial push to the frontend service CodeCommit source
+            # repo created as part of this stack.
+            #
+
+            # Install git, pip and the CodeCommit helper.
             sudo yum install -y git
             curl -O https://bootstrap.pypa.io/get-pip.py
             python get-pip.py
             pip install git-remote-codecommit
+
+            # Clone the repo from the original repo and push to the CodeCommit
+            # remote.
             git clone ${SourceRepo}
             cd microservices
             git remote add codecommit codecommit::${AWS::Region}://${CodeCommitRepositoryName}
             git fetch --all
             git push -f -u codecommit master
+
+            #
+            # Make an initial push to the frontend service ECR repo created as
+            # part of this stack.
+            #
+
+            # Install Docker.
+            amazon-linux-extras install -y docker
+
+            # Start Docker.
+            service docker start
+
+            # Authenticate to ECR.
+            $(aws ecr get-login --no-include-email --region ${AWS::Region})
+
+            # Build, tag and push.
+            docker build -t frontend-svc ./src/frontend/
+            docker tag frontend-svc:latest ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${FrontendServiceEcrRepoName}:latest
+            docker push ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${FrontendServiceEcrRepoName}:latest

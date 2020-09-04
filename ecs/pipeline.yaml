@@ -149,3 +149,5 @@ Outputs:
     Value: !GetAtt CodeCommitRepository.Arn
   CodeCommitRepositoryName:
     Value: !GetAtt CodeCommitRepository.Name
+  FrontendServiceEcrRepoName:
+    Value: !Ref ECRRepository
