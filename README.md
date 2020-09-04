@@ -4,7 +4,7 @@ This repository contains a demo of a sample microservices-based architecture. Th
 
 The current implementation supports Amazon ECS, but a Kubernetes version (hosted on Amazon EKS) is also in the works.
 
-### How to deploy (Amazon ECS)
+## How to deploy (Amazon ECS)
 
 The infrastructure is defined as a set of nested CloudFormation templates. Just package and deploy the master template located in `ecs/template.yaml`. You can do this easily with the AWS CLI:
 
@@ -34,6 +34,13 @@ aws cloudformation deploy \
 Note that all parameters ending in `*ImageUri` default to the public Docker repositories hosted on Docker Hub, but you could use custom images in private repos such as Amazon ECR.
 
 The stack output includes a link to the ALB endpoint, which is the application entry point.
+
+**NOTE:** Some resources will be retained on stack deletion, as otherwise the deletion will fail because they need to be empty (S3 buckets, ECR repositories, etc.). You will need to  delete them manually; failing to do so might incur in costs. For your reference, the CloudFormation logical names for these resources are:
+
+* `ArtifactStoreBucket`
+* `ECRRepository`
+
+### Architecture
 
 The following architecture diagram illustrates what gets deployed:
 
