@@ -38,7 +38,11 @@ $size = json_decode($sizeResponse);
     <span class="word"><?php echo($word->word); ?></span>
     <script type="text/javascript">
         window.onload = () => {
-            window.setTimeout(() => {location.reload()}, 200);
+            // Only reload if query string has the right parameter.
+            let params = new URLSearchParams(window.location.search);
+            if (params.has('reload')) {
+                window.setTimeout(() => {location.reload()}, 200);
+            }
         };
     </script>
 </body>
