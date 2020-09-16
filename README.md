@@ -16,7 +16,7 @@ aws s3 mb s3://<your-bucket-name>
 # Package all the templates
 aws cloudformation package \
 	--template-file ./ecs/template.yaml \
-	--s3-bucket <your-bucket-name>
+	--s3-bucket <your-bucket-name> \
 	--output-template-file ./ecs/processed.yaml
 
 # And now deploy them
