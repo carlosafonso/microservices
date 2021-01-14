@@ -23,15 +23,22 @@ aws cloudformation package \
 aws cloudformation deploy \
 	--stack-name microservices \
 	--template-file ./ecs/processed.yaml \
-	--parameter-overrides \
-		FontColorImageUri=carlosafonso/microservices-font-color \
-		FontSizeImageUri=carlosafonso/microservices-font-size \
-		WordImageUri=carlosafonso/microservices-word \
-		FrontendImageUri=carlosafonso/microservices-frontend \
 	--capabilities CAPABILITY_IAM
 ```
 
-Note that all parameters ending in `*ImageUri` default to the public Docker repositories hosted on Docker Hub, but you could use custom images in private repos such as Amazon ECR.
+Note that if you don't specify any parameters, the template will use the default images hosted in the Amazon ECR Public Gallery. But you can use your own images, even those hosted in ECR private repositories, like this:
+
+```
+aws cloudformation deploy \
+	--stack-name microservices \
+	--template-file ./ecs/processed.yaml \
+	--parameter-overrides \
+		FontColorImageUri=<URL-to-your-image> \
+		FontSizeImageUri=<URL-to-your-image> \
+		WordImageUri=<URL-to-your-image> \
+		FrontendImageUri=<URL-to-your-image> \
+	--capabilities CAPABILITY_IAM
+```
 
 The stack output includes a link to the ALB endpoint, which is the application entry point.
 

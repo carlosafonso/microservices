@@ -1,16 +1,16 @@
 Parameters:
   FontColorImageUri:
     Type: String
-    Default: carlosafonso/microservices-font-color
+    Default: public.ecr.aws/h8l4v6g9/microservices-font-color:latest
   FontSizeImageUri:
     Type: String
-    Default: carlosafonso/microservices-font-size
+    Default: public.ecr.aws/h8l4v6g9/microservices-font-size:latest
   WordImageUri:
     Type: String
-    Default: carlosafonso/microservices-word
+    Default: public.ecr.aws/h8l4v6g9/microservices-word:latest
   FrontendImageUri:
     Type: String
-    Default: carlosafonso/microservices-frontend
+    Default: public.ecr.aws/h8l4v6g9/microservices-frontend:latest
   LogRetentionPeriod:
     Type: Number
     Default: 14
