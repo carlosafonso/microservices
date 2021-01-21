@@ -114,6 +114,7 @@ Resources:
               Configuration:
                 RepositoryName: !GetAtt CodeCommitRepository.Name
                 BranchName: master
+                PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Source
         - Name: Build
