@@ -44,7 +44,7 @@ Resources:
         EnvironmentVariables:
           - Name: REPOSITORY_URI
             Type: PLAINTEXT
-            Value: !Select [0, !Split [':', !Ref FrontendImageUri]]
+            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}"
         Image: aws/codebuild/standard:1.0
         PrivilegedMode: true
         Type: LINUX_CONTAINER
