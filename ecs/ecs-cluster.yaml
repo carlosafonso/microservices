@@ -114,6 +114,10 @@ Resources:
 
   Cluster:
     Type: AWS::ECS::Cluster
+    Properties:
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
 
 Outputs:
   ALB:
