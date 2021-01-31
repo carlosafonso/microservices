@@ -45,7 +45,7 @@ Resources:
           - Name: REPOSITORY_URI
             Type: PLAINTEXT
             Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}"
-        Image: aws/codebuild/standard:1.0
+        Image: aws/codebuild/standard:5.0
         PrivilegedMode: true
         Type: LINUX_CONTAINER
       ServiceRole: !Ref CodeBuildServiceRole

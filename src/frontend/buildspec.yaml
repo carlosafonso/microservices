@@ -7,7 +7,7 @@ phases:
       - printf "%s:%s" "$REPOSITORY_URI" "$(cat /tmp/build_id.out)" > /tmp/build_tag.out
       - printf '[{"name":"frontend","imageUri":"%s"}]' "$(cat /tmp/build_tag.out)" > imagedefinitions.json
       - echo Logging in to Amazon ECR...
-      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+      - aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
   build:
     commands:
       - echo Build started on `date`
