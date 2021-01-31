@@ -47,7 +47,7 @@ Resources:
       ExecutionRoleArn: !Ref TaskExecutionRoleArn
       NetworkMode: awsvpc
       RequiresCompatibilities:
-        - FARGATE
+        - EC2
 
   FrontendService:
     Type: AWS::ECS::Service
@@ -60,7 +60,7 @@ Resources:
       DeploymentController:
         Type: ECS
       DesiredCount: 2
-      LaunchType: FARGATE
+      LaunchType: EC2
       LoadBalancers:
         - ContainerName: frontend
           ContainerPort: 8080

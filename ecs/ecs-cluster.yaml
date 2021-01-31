@@ -112,12 +112,102 @@ Resources:
       ToPort: 65535
       Description: Traffic from the other services
 
+  WorkerNodeInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+      Policies:
+        - PolicyName: 'SessionsManagerPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:UpdateInstanceInformation'
+                  - 'ssmmessages:CreateControlChannel'
+                  - 'ssmmessages:CreateDataChannel'
+                  - 'ssmmessages:OpenControlChannel'
+                  - 'ssmmessages:OpenDataChannel'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 's3:GetEncryptionConfiguration'
+                Resource: '*'
+
+  WorkerNodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref WorkerNodeInstanceRole]
+
+  WorkerNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to be used in the ECS cluster worker nodes
+      VpcId: !Ref VpcId
+
+  WorkerNodeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Name: !Ref WorkerNodeInstanceProfile
+        ImageId: '{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id:52}}'
+        InstanceType: m5.large
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            Groups:
+              - !Ref WorkerNodeSecurityGroup
+            DeleteOnTermination: true
+        UserData:
+          # See comment in "Cluster" to understand why we're hardcoding the
+          # cluster name.
+          Fn::Base64:
+            !Sub |
+            #!/bin/bash
+            echo "ECS_CLUSTER=${AWS::StackName}-MicroservicesCluster" >> /etc/ecs/ecs.config
+
+  WorkerNodeASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WorkerNodeLaunchTemplate
+        Version: !GetAtt WorkerNodeLaunchTemplate.LatestVersionNumber
+      MaxSize: 10
+      MinSize: 0
+      VPCZoneIdentifier:
+        - !Ref PublicSubnetAId
+        - !Ref PublicSubnetBId
+
+  WorkerNodeCapacityProvider:
+    Type: AWS::ECS::CapacityProvider
+    Properties:
+      AutoScalingGroupProvider:
+        AutoScalingGroupArn: !Ref WorkerNodeASG
+        ManagedScaling:
+          Status: ENABLED
+          TargetCapacity: 90
+
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterSettings:
         - Name: containerInsights
           Value: enabled
+      # The way CloudFormation currently supports Capacity Providers forces us
+      # to define a static cluster name, as otherwise this would introduce a
+      # circular dependency.
+      # (Cluster <- LaunchTemplate <- ASG <- Capacity Provider <- Cluster)
+      ClusterName: !Sub ${AWS::StackName}-MicroservicesCluster
+      CapacityProviders:
+        - !Ref WorkerNodeCapacityProvider
 
 Outputs:
   ALB:

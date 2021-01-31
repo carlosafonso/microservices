@@ -51,14 +51,14 @@ Resources:
       ExecutionRoleArn: !Ref TaskExecutionRoleArn
       NetworkMode: awsvpc
       RequiresCompatibilities:
-        - FARGATE
+        - EC2
 
   FontSizeService:
     Type: AWS::ECS::Service
     Properties:
       Cluster: !Ref ClusterArn
       DesiredCount: 2
-      LaunchType: FARGATE
+      LaunchType: EC2
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups:
