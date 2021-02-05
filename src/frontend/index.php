@@ -1,8 +1,16 @@
 <?php
 
-$wordResponse = file_get_contents('http://' . getenv('WORD_SVC'));
-$colorResponse = file_get_contents('http://' . getenv('FONT_COLOR_SVC'));
-$sizeResponse = file_get_contents('http://' . getenv('FONT_SIZE_SVC'));
+function get($url) {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $output = curl_exec($ch);
+    curl_close($ch);
+    return $output;
+}
+
+$wordResponse = get('http://' . getenv('WORD_SVC'));
+$colorResponse = get('http://' . getenv('FONT_COLOR_SVC'));
+$sizeResponse = get('http://' . getenv('FONT_SIZE_SVC'));
 
 $word = json_decode($wordResponse);
 $color = json_decode($colorResponse);
