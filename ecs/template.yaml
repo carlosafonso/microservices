@@ -127,6 +127,7 @@ Resources:
         FontSizeServiceName: !GetAtt FontSizeServiceStack.Outputs.ServiceName
         FrontendServiceName: !GetAtt FrontendServiceStack.Outputs.ServiceName
         WordServiceName: !GetAtt WordServiceStack.Outputs.ServiceName
+        WorkerNodeASGName: !GetAtt EcsClusterStack.Outputs.WorkerNodeASGName
 
   LogGroup:
     Type: AWS::Logs::LogGroup

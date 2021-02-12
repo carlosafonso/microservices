@@ -182,6 +182,8 @@ Resources:
         Version: !GetAtt WorkerNodeLaunchTemplate.LatestVersionNumber
       MaxSize: 10
       MinSize: 0
+      MetricsCollection:
+        - Granularity: 1Minute
       VPCZoneIdentifier:
         - !Ref PublicSubnetAId
         - !Ref PublicSubnetBId
@@ -226,5 +228,7 @@ Outputs:
     Value: !GetAtt Cluster.Arn
   ClusterSecurityGroupId:
     Value: !Ref ClusterSecurityGroup
+  WorkerNodeASGName:
+    Value: !Ref WorkerNodeASG
   TaskExecutionRoleArn:
     Value: !Ref TaskExecutionRole

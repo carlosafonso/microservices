@@ -11,6 +11,8 @@ Parameters:
     Type: String
   WordServiceName:
     Type: String
+  WorkerNodeASGName:
+    Type: String
 
 Resources:
   Dashboard:
@@ -116,6 +118,30 @@ Resources:
               "properties": {
                 "metrics": [
                   [ "AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", "${ALBFullName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 14,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "ECS Cluster Worker Nodes",
+                "metrics": [
+                  [ "AWS/AutoScaling", "GroupDesiredCapacity", "AutoScalingGroupName", "${WorkerNodeASGName}" ],
+                  [ ".", "GroupMaxSize", ".", "." ],
+                  [ ".", "GroupMinSize", ".", "." ],
+                  [ ".", "GroupInServiceInstances", ".", "." ],
+                  [ ".", "GroupPendingInstances", ".", "." ],
+                  [ ".", "GroupTotalInstances", ".", "." ],
+                  [ ".", "GroupTerminatingInstances", ".", "." ]
                 ],
                 "view": "timeSeries",
                 "stacked": false,
