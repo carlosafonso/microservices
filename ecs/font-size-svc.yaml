@@ -58,7 +58,6 @@ Resources:
     Properties:
       Cluster: !Ref ClusterArn
       DesiredCount: 2
-      LaunchType: EC2
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups:

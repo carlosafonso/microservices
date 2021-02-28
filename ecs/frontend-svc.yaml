@@ -60,7 +60,6 @@ Resources:
       DeploymentController:
         Type: ECS
       DesiredCount: 2
-      LaunchType: EC2
       LoadBalancers:
         - ContainerName: frontend
           ContainerPort: 8080

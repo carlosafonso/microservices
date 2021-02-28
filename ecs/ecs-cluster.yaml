@@ -159,7 +159,6 @@ Resources:
         IamInstanceProfile:
           Name: !Ref WorkerNodeInstanceProfile
         ImageId: '{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id:52}}'
-        InstanceType: m5.large
         NetworkInterfaces:
           - DeviceIndex: 0
             AssociatePublicIpAddress: true
@@ -177,11 +176,23 @@ Resources:
   WorkerNodeASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      LaunchTemplate:
-        LaunchTemplateId: !Ref WorkerNodeLaunchTemplate
-        Version: !GetAtt WorkerNodeLaunchTemplate.LatestVersionNumber
       MaxSize: 10
       MinSize: 0
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandBaseCapacity: 0
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: lowest-price
+          SpotInstancePools: 3
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref WorkerNodeLaunchTemplate
+            Version: !GetAtt WorkerNodeLaunchTemplate.LatestVersionNumber
+          Overrides:
+            - InstanceType: m5.large
+            - InstanceType: m5a.large
+            - InstanceType: m5d.large
+            - InstanceType: m5ad.large
       MetricsCollection:
         - Granularity: 1Minute
       VPCZoneIdentifier:
