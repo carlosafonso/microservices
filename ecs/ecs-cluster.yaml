@@ -78,6 +78,24 @@ Resources:
       Name: microservices
       Vpc: !Ref VpcId
 
+  # Specifically needed for tasks to communicate with App Mesh
+  TaskIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": { "Service": [ "ecs-tasks.amazonaws.com" ]},
+                "Action": [ "sts:AssumeRole" ]
+            }]
+        }
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+        - arn:aws:iam::aws:policy/AWSAppMeshEnvoyAccess
+
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -123,6 +141,9 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+        # This policy has been set for App Mesh. Remember to narrow it down:
+        # https://docs.aws.amazon.com/app-mesh/latest/userguide/proxy-authorization.html#create-iam-policy
+        - arn:aws:iam::aws:policy/AdministratorAccess
       Policies:
         - PolicyName: 'SessionsManagerPolicy'
           PolicyDocument:
@@ -247,3 +268,5 @@ Outputs:
     Value: !Ref WorkerNodeASG
   TaskExecutionRoleArn:
     Value: !Ref TaskExecutionRole
+  TaskIamRoleArn:
+    Value: !Ref TaskIamRole

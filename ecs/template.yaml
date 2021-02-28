@@ -64,6 +64,7 @@ Resources:
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
         ServiceRegistryNamespaceId: !GetAtt EcsClusterStack.Outputs.ServiceRegistryNamespaceId
         TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+        TaskIamRoleArn: !GetAtt EcsClusterStack.Outputs.TaskIamRoleArn
 
   FontSizeServiceStack:
     Type: AWS::CloudFormation::Stack
@@ -79,6 +80,7 @@ Resources:
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
         ServiceRegistryNamespaceId: !GetAtt EcsClusterStack.Outputs.ServiceRegistryNamespaceId
         TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+        TaskIamRoleArn: !GetAtt EcsClusterStack.Outputs.TaskIamRoleArn
 
   WordServiceStack:
     Type: AWS::CloudFormation::Stack
@@ -94,6 +96,7 @@ Resources:
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
         ServiceRegistryNamespaceId: !GetAtt EcsClusterStack.Outputs.ServiceRegistryNamespaceId
         TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+        TaskIamRoleArn: !GetAtt EcsClusterStack.Outputs.TaskIamRoleArn
 
   FrontendServiceStack:
     Type: AWS::CloudFormation::Stack
@@ -109,6 +112,7 @@ Resources:
         PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
         TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+        TaskIamRoleArn: !GetAtt EcsClusterStack.Outputs.TaskIamRoleArn
   #
   # End of Section: ECS cluster
   #
