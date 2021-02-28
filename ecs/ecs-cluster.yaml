@@ -206,7 +206,7 @@ Resources:
         AutoScalingGroupArn: !Ref WorkerNodeASG
         ManagedScaling:
           Status: ENABLED
-          TargetCapacity: 90
+          TargetCapacity: 100
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -221,6 +221,10 @@ Resources:
       ClusterName: !Sub ${AWS::StackName}-MicroservicesCluster
       CapacityProviders:
         - !Ref WorkerNodeCapacityProvider
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: !Ref WorkerNodeCapacityProvider
+          Weight: 1
+
 
 Outputs:
   ALB:
