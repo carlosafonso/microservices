@@ -8,17 +8,54 @@ services:
       - FONT_COLOR_SVC=font_color:8080
       - FONT_SIZE_SVC=font_size:8080
       - WORD_SVC=word:80
+      - AWS_DEFAULT_REGION
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - WORKER_SQS_QUEUE_URL=http://localstack:4566/000000000000/microservices
+    networks:
+      - microservices
+    volumes:
+      - ./src/frontend:/var/www/html
+
   font_color:
     build: ./src/font-color
     ports:
       - "9875:8080"
+    networks:
+      - microservices
+
   font_size:
     build: ./src/font-size
     ports:
       - "9874:8080"
+    networks:
+      - microservices
+
   word:
     build: ./src/word
     ports:
       - "9873:80"
+    networks:
+      - microservices
     environment:
       - RANDOM_ERROR_PROBABILITY=0.5
+
+  worker:
+    build: ./src/worker
+    networks:
+      - microservices
+    environment:
+      - AWS_DEFAULT_REGION
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - WORKER_SQS_QUEUE_URL=http://localstack:4566/000000000000/microservices
+      - WORKER_SQS_ENDPOINT_URL=http://localstack:4566
+    volumes:
+      - ./src/worker:/srv/worker
+
+networks:
+  microservices:
+    name: microservices
+    driver: bridge

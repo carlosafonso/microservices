@@ -1,16 +1,19 @@
 Parameters:
   FontColorImageUri:
     Type: String
-    Default: public.ecr.aws/h8l4v6g9/microservices-font-color:latest
+    Default: public.ecr.aws/carlosafonso-aws/microservices-font-color:latest
   FontSizeImageUri:
     Type: String
-    Default: public.ecr.aws/h8l4v6g9/microservices-font-size:latest
+    Default: public.ecr.aws/carlosafonso-aws/microservices-font-size:latest
   WordImageUri:
     Type: String
-    Default: public.ecr.aws/h8l4v6g9/microservices-word:latest
+    Default: public.ecr.aws/carlosafonso-aws/microservices-word:latest
   FrontendImageUri:
     Type: String
-    Default: public.ecr.aws/h8l4v6g9/microservices-frontend:latest
+    Default: public.ecr.aws/carlosafonso-aws/microservices-frontend:latest
+  WorkerImageUri:
+    Type: String
+    Default: public.ecr.aws/carlosafonso-aws/microservices-worker:latest
   LogRetentionPeriod:
     Type: Number
     Default: 14
@@ -107,6 +110,21 @@ Resources:
         ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
         ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
         FrontendImageUri: !Ref FrontendImageUri
+        LogGroup: !Ref LogGroup
+        PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+        PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
+        TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+
+  WorkerServiceStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./worker-svc.yaml
+      Parameters:
+        ClusterArn: !GetAtt EcsClusterStack.Outputs.ClusterArn
+        ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
+        # ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
+        WorkerImageUri: !Ref WorkerImageUri
+        JobQueueUrl: !GetAtt EcsClusterStack.Outputs.JobQueueUrl
         LogGroup: !Ref LogGroup
         PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId

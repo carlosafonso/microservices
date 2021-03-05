@@ -229,6 +229,8 @@ Resources:
         - CapacityProvider: !Ref WorkerNodeCapacityProvider
           Weight: 1
 
+  JobQueue:
+    Type: AWS::SQS::Queue
 
 Outputs:
   ALB:
@@ -247,7 +249,9 @@ Outputs:
     Value: !GetAtt Cluster.Arn
   ClusterSecurityGroupId:
     Value: !Ref ClusterSecurityGroup
-  WorkerNodeASGName:
-    Value: !Ref WorkerNodeASG
+  JobQueueUrl:
+    Value: !Ref JobQueue
   TaskExecutionRoleArn:
     Value: !Ref TaskExecutionRole
+  WorkerNodeASGName:
+    Value: !Ref WorkerNodeASG

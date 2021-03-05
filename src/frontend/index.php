@@ -1,5 +1,7 @@
 <?php
 
+require __DIR__ . '/vendor/autoload.php';
+
 function get($url) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -55,3 +57,12 @@ $size = json_decode($sizeResponse);
     </script>
 </body>
 </html>
+<?php
+
+$sqs = new \Aws\Sqs\SqsClient(['region' => getenv('AWS_DEFAULT_REGION'), 'version' => 'latest']);
+$sqs->sendMessage([
+    'MessageBody' => json_encode(['word' => $word, 'color' => $color, 'size' => $size]),
+    'QueueUrl' => getenv('WORKER_SQS_QUEUE_URL')
+]);
+
+?>
