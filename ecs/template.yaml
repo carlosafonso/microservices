@@ -49,6 +49,8 @@ Resources:
         VpcId: !GetAtt NetworkStack.Outputs.VpcId
         PublicSubnetAId: !GetAtt NetworkStack.Outputs.PublicSubnetAId
         PublicSubnetBId: !GetAtt NetworkStack.Outputs.PublicSubnetBId
+        PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
+        PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
 
   FontColorServiceStack:
     Type: AWS::CloudFormation::Stack
