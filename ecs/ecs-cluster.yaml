@@ -5,6 +5,10 @@ Parameters:
     Type: String
   PublicSubnetBId:
     Type: String
+  PrivateSubnetAId:
+    Type: String
+  PrivateSubnetBId:
+    Type: String
 
 Resources:
   ALBSecurityGroup:
@@ -196,8 +200,8 @@ Resources:
       MetricsCollection:
         - Granularity: 1Minute
       VPCZoneIdentifier:
-        - !Ref PublicSubnetAId
-        - !Ref PublicSubnetBId
+        - !Ref PrivateSubnetAId
+        - !Ref PrivateSubnetBId
 
   WorkerNodeCapacityProvider:
     Type: AWS::ECS::CapacityProvider
