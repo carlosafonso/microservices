@@ -37,6 +37,7 @@ aws cloudformation deploy \
 		FontSizeImageUri=<URL-to-your-image> \
 		WordImageUri=<URL-to-your-image> \
 		FrontendImageUri=<URL-to-your-image> \
+		WorkerImageUri=<URL-to-your-image> \
 	--capabilities CAPABILITY_IAM
 ```
 

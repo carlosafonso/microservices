@@ -82,6 +82,23 @@ Resources:
       Name: microservices
       Vpc: !Ref VpcId
 
+  TaskIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": { "Service": [ "ecs-tasks.amazonaws.com" ]},
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        }
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -249,9 +266,13 @@ Outputs:
     Value: !GetAtt Cluster.Arn
   ClusterSecurityGroupId:
     Value: !Ref ClusterSecurityGroup
+  JobQueueName:
+    Value: !GetAtt JobQueue.QueueName
   JobQueueUrl:
     Value: !Ref JobQueue
   TaskExecutionRoleArn:
     Value: !Ref TaskExecutionRole
+  TaskIamRoleArn:
+    Value: !Ref TaskIamRole
   WorkerNodeASGName:
     Value: !Ref WorkerNodeASG

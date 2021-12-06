@@ -9,6 +9,8 @@ Parameters:
     Type: String
   FrontendImageUri:
     Type: String
+  JobQueueUrl:
+    Type: String
   LogGroup:
     Type: String
   PrivateSubnetAId:
@@ -16,6 +18,8 @@ Parameters:
   PrivateSubnetBId:
     Type: String
   TaskExecutionRoleArn:
+    Type: String
+  TaskIamRoleArn:
     Type: String
 
 Resources:
@@ -26,12 +30,16 @@ Resources:
         - Name: frontend
           Image: !Ref FrontendImageUri
           Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref AWS::Region
             - Name: FONT_COLOR_SVC
               Value: font-color.microservices:8080
             - Name: FONT_SIZE_SVC
               Value: font-size.microservices:8080
             - Name: WORD_SVC
               Value: word.microservices:80
+            - Name: WORKER_SQS_QUEUE_URL
+              Value: !Ref JobQueueUrl
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -48,6 +56,7 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - EC2
+      TaskRoleArn: !Ref TaskIamRoleArn
 
   FrontendService:
     Type: AWS::ECS::Service

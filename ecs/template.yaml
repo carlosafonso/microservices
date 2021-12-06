@@ -110,10 +110,12 @@ Resources:
         ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
         ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
         FrontendImageUri: !Ref FrontendImageUri
+        JobQueueUrl: !GetAtt EcsClusterStack.Outputs.JobQueueUrl
         LogGroup: !Ref LogGroup
         PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
         TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+        TaskIamRoleArn: !GetAtt EcsClusterStack.Outputs.TaskIamRoleArn
 
   WorkerServiceStack:
     Type: AWS::CloudFormation::Stack
@@ -124,11 +126,13 @@ Resources:
         ClusterName: !GetAtt EcsClusterStack.Outputs.ClusterName
         # ClusterSecurityGroupId: !GetAtt EcsClusterStack.Outputs.ClusterSecurityGroupId
         WorkerImageUri: !Ref WorkerImageUri
+        JobQueueName: !GetAtt EcsClusterStack.Outputs.JobQueueName
         JobQueueUrl: !GetAtt EcsClusterStack.Outputs.JobQueueUrl
         LogGroup: !Ref LogGroup
         PrivateSubnetAId: !GetAtt NetworkStack.Outputs.PrivateSubnetAId
         PrivateSubnetBId: !GetAtt NetworkStack.Outputs.PrivateSubnetBId
         TaskExecutionRoleArn: !GetAtt EcsClusterStack.Outputs.TaskExecutionRoleArn
+        TaskIamRoleArn: !GetAtt EcsClusterStack.Outputs.TaskIamRoleArn
   #
   # End of Section: ECS cluster
   #
