@@ -3,7 +3,7 @@ services:
   frontend:
     build: ./src/frontend
     ports:
-      - "9876:8080"
+      - "9876:80"
     environment:
       - FONT_COLOR_SVC=font_color:8080
       - FONT_SIZE_SVC=font_size:8080
