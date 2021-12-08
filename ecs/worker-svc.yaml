@@ -187,6 +187,6 @@ Resources:
           ReturnData: true
       Threshold: 1
 
-# Outputs:
-#   ServiceName:
-#     Value: !GetAtt FontColorService.Name
+Outputs:
+  ServiceName:
+    Value: !GetAtt WorkerService.Name

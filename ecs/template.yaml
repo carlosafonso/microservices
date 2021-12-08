@@ -150,8 +150,10 @@ Resources:
         FontColorServiceName: !GetAtt FontColorServiceStack.Outputs.ServiceName
         FontSizeServiceName: !GetAtt FontSizeServiceStack.Outputs.ServiceName
         FrontendServiceName: !GetAtt FrontendServiceStack.Outputs.ServiceName
+        JobQueueName: !GetAtt EcsClusterStack.Outputs.JobQueueName
         WordServiceName: !GetAtt WordServiceStack.Outputs.ServiceName
         WorkerNodeASGName: !GetAtt EcsClusterStack.Outputs.WorkerNodeASGName
+        WorkerServiceName: !GetAtt WorkerServiceStack.Outputs.ServiceName
 
   LogGroup:
     Type: AWS::Logs::LogGroup

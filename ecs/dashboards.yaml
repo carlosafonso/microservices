@@ -9,9 +9,13 @@ Parameters:
     Type: String
   FrontendServiceName:
     Type: String
+  JobQueueName:
+    Type: String
   WordServiceName:
     Type: String
   WorkerNodeASGName:
+    Type: String
+  WorkerServiceName:
     Type: String
 
 Resources:
@@ -25,8 +29,6 @@ Resources:
           "widgets": [
             {
               "type": "metric",
-              "x": 0,
-              "y": 0,
               "width": 12,
               "height": 6,
               "properties": {
@@ -53,8 +55,6 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 13,
-              "y": 0,
               "width": 12,
               "height": 6,
               "properties": {
@@ -94,8 +94,6 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 0,
-              "y": 7,
               "width": 12,
               "height": 6,
               "properties": {
@@ -111,8 +109,6 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 13,
-              "y": 7,
               "width": 12,
               "height": 6,
               "properties": {
@@ -128,8 +124,6 @@ Resources:
             },
             {
               "type": "metric",
-              "x": 0,
-              "y": 14,
               "width": 12,
               "height": 6,
               "properties": {
@@ -142,6 +136,64 @@ Resources:
                   [ ".", "GroupPendingInstances", ".", "." ],
                   [ ".", "GroupTotalInstances", ".", "." ],
                   [ ".", "GroupTerminatingInstances", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            },
+            {
+              "type": "text",
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "# Worker Service"
+              }
+            },
+            {
+              "type": "metric",
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Queue - ApproximateNumberOfMessagesVisible",
+                "metrics": [
+                  [ "AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${JobQueueName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 60
+              }
+            },
+            {
+              "type": "metric",
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Queue - ApproximateAgeOfOldestMessage",
+                "metrics": [
+                  [ "AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "${JobQueueName}" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "stat": "Average",
+                "period": 60
+              }
+            },
+            {
+              "type": "metric",
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Service Tasks Count",
+                "metrics": [
+                  [ "ECS/ContainerInsights", "RunningTaskCount", "ServiceName", "${WorkerServiceName}", "ClusterName", "${ClusterName}" ],
+                  [ ".", "DesiredTaskCount", ".", ".", ".", "." ],
+                  [ ".", "PendingTaskCount", ".", ".", ".", "." ]
                 ],
                 "view": "timeSeries",
                 "stacked": false,
