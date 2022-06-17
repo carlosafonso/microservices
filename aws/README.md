@@ -1,8 +1,6 @@
-# microservices
+# microservices/aws
 
-This repository contains a demo of a sample microservices-based architecture. The idea of this demo is to easily set up and play around with concepts such as CI/CD deployment techniques, service meshes, service discovery, operational dashboards, etc.
-
-The current implementation supports Amazon ECS, but a Kubernetes version (hosted on Amazon EKS) is also in the works.
+This folder contains an implementation of the microservices demo on top of Amazon Web Services (AWS).
 
 ## How to deploy (Amazon ECS)
 
