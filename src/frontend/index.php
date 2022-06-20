@@ -1,16 +1,38 @@
 <?php
 
+require __DIR__ . '/vendor/autoload.php';
+
+use Google\Auth\ApplicationDefaultCredentials;
+use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+
+$fontColorSvcEndpoint = getenv('FONT_COLOR_SVC');
+$fontSizeSvcEndpoint = getenv('FONT_SIZE_SVC');
+$wordSvcEndpoint = getenv('WORD_SVC');
+
+/**
+ * Make an HTTP GET request to the given URL, signing the request in the
+ * process.
+ */
 function get($url) {
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    $output = curl_exec($ch);
-    curl_close($ch);
-    return $output;
+    // We can use the URL as the audience for now, because the audience should
+    // be the root URL of the Cloud Run service we are invoking, which holds
+    // true for the time being.
+    $middleware = ApplicationDefaultCredentials::getIdTokenMiddleware($url);
+    $stack = HandlerStack::create();
+    $stack->push($middleware);
+
+    $client = new Client([
+        'handler' => $stack,
+        'auth' => 'google_auth',
+    ]);
+
+    return $client->get($url)->getBody();
 }
 
-$wordResponse = get('http://' . getenv('WORD_SVC'));
-$colorResponse = get('http://' . getenv('FONT_COLOR_SVC'));
-$sizeResponse = get('http://' . getenv('FONT_SIZE_SVC'));
+$wordResponse = get($wordSvcEndpoint);
+$colorResponse = get($fontColorSvcEndpoint);
+$sizeResponse = get($fontSizeSvcEndpoint);
 
 $word = json_decode($wordResponse);
 $color = json_decode($colorResponse);

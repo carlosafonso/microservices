@@ -2,12 +2,14 @@ version: "3"
 services:
   frontend:
     build: ./src/frontend
+    volumes:
+      - ~/microservices/src/frontend:/var/www/html
     ports:
       - "9876:8080"
     environment:
-      - FONT_COLOR_SVC=font_color:8080
-      - FONT_SIZE_SVC=font_size:8080
-      - WORD_SVC=word:80
+      - FONT_COLOR_SVC=${MICROSERVICES_FONT_COLOR_SVC:-font_color:8080}
+      - FONT_SIZE_SVC=${MICROSERVICES_FONT_SIZE_SVC:-font_size:8080}
+      - WORD_SVC=${MICROSERVICES_WORD_SVC:-word:80}
   font_color:
     build: ./src/font-color
     ports:
@@ -21,4 +23,4 @@ services:
     ports:
       - "9873:80"
     environment:
-      - RANDOM_ERROR_PROBABILITY=0.5
+      - RANDOM_ERROR_PROBABILITY=${MICROSERVICES_WORD_SVC_RANDOM_ERROR_PROBABILITY:-0.5}
