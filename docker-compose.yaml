@@ -24,3 +24,9 @@ services:
       - "9873:80"
     environment:
       - RANDOM_ERROR_PROBABILITY=${MICROSERVICES_WORD_SVC_RANDOM_ERROR_PROBABILITY:-0.5}
+  worker:
+    build: ./src/worker
+    ports:
+      - "9872:8080"
+    environment:
+      - PORT=8080

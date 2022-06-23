@@ -21,6 +21,17 @@ resource "google_compute_network" "vpc" {
   auto_create_subnetworks = "false"
 }
 
+###############################################################################
+# Module: common stuff
+###############################################################################
+# The Pub/Sub topic where events will be published.
+#
+# This topic is currently consumed only by the worker service, but we could
+# also e.g. send events into BigQuery for analytical consumption in the future.
+resource "google_pubsub_topic" "events" {
+  name = "events"
+}
+
 # This IAM policy allows Cloud Run invocations from everywhere, including
 # unauthenticated users. We'll use this to allow requests to the Frontend 
 # Service from the public Internet, as this is the intended behavior.
@@ -185,4 +196,66 @@ resource "google_cloud_run_service_iam_policy" "frontend_noauth" {
   project = google_cloud_run_service.frontend.project
   service = google_cloud_run_service.frontend.name
   policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+###############################################################################
+# Module: worker service
+###############################################################################
+resource "google_cloud_run_service" "worker" {
+  name     = "worker"
+  location = var.region
+
+  template {
+    spec {
+      containers {
+        image = "gcr.io/${var.project}/microservices-worker:latest"
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+}
+
+resource "google_service_account" "pubsub_events_worker_svc_subscription" {
+  account_id = "worker-svc-events"
+  display_name = "Worker Service Subscription to Events Pub/Sub Topic"
+}
+
+resource "google_pubsub_subscription" "worker_svc_events" {
+  name = "worker-svc-events"
+  topic = google_pubsub_topic.events.name
+
+  # Setting this to the maximum value, as recommended by the Cloud Run docs
+  # (https://cloud.google.com/run/docs/triggering/pubsub-push#ack-deadline)
+  ack_deadline_seconds = 600
+
+  push_config {
+    push_endpoint = join("", [google_cloud_run_service.worker.status[0].url, "/pubsub/push"])
+
+    oidc_token {
+      service_account_email = google_service_account.pubsub_events_worker_svc_subscription.email
+    }
+  }
+}
+
+# This IAM policy grants the Cloud Run Invoker role to the service account used
+# by the Pub/Sub subscription, so that only this subscription can inovke the
+# worker service.
+data "google_iam_policy" "worker_pubsub" {
+  binding {
+    role = "roles/run.invoker"
+    members = [
+      "serviceAccount:${google_service_account.pubsub_events_worker_svc_subscription.email}",
+    ]
+  }
+}
+
+resource "google_cloud_run_service_iam_policy" "worker_pubsub" {
+  location = google_cloud_run_service.worker.location
+  project = google_cloud_run_service.worker.project
+  service = google_cloud_run_service.worker.name
+  policy_data = data.google_iam_policy.worker_pubsub.policy_data
 }
