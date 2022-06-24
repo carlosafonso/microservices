@@ -2,6 +2,12 @@
 
 This folder contains an implementation of the microservices demo on top of Google Cloud Platform (GCP).
 
+## Architecture
+
+The current implementation deploys all services on Cloud Run. The Worker Service is push-subscribed to a Pub/Sub topic.
+
+![Architecture diagram](architecture.png)
+
 ## How to deploy
 
 (Note that this section is currently WIP.)
