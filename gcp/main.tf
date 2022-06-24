@@ -32,18 +32,6 @@ resource "google_pubsub_topic" "events" {
   name = "events"
 }
 
-# This IAM policy allows Cloud Run invocations from everywhere, including
-# unauthenticated users. We'll use this to allow requests to the Frontend 
-# Service from the public Internet, as this is the intended behavior.
-data "google_iam_policy" "noauth" {
-  binding {
-    role = "roles/run.invoker"
-    members = [
-      "allUsers",
-    ]
-  }
-}
-
 # This IAM policy only allows Cloud Run invocations from the Frontend Service's
 # service account. We'll use this to protect the private Cloud Run services.
 data "google_iam_policy" "allow_frontend_only" {
@@ -156,6 +144,15 @@ resource "google_service_account" "frontend_svc" {
   display_name = "Frontend Service"
 }
 
+# This IAM policy allows the Frontend Service to publish messages into Pub/Sub.
+resource "google_project_iam_binding" "frontend_svc_account" {
+  project = var.project
+  role = "roles/pubsub.publisher"
+  members = [
+      "serviceAccount:${google_service_account.frontend_svc.email}",
+  ]
+}
+
 resource "google_cloud_run_service" "frontend" {
   name     = "frontend"
   location = var.region
@@ -181,6 +178,10 @@ resource "google_cloud_run_service" "frontend" {
           name = "WORD_SVC"
           value = google_cloud_run_service.word.status[0].url
         }
+        env {
+          name = "PUBSUB_EVENTS_TOPIC"
+          value = google_pubsub_topic.events.name
+        }
       }
     }
   }
@@ -191,11 +192,26 @@ resource "google_cloud_run_service" "frontend" {
   }
 }
 
-resource "google_cloud_run_service_iam_policy" "frontend_noauth" {
+# This IAM policy allows Cloud Run invocations from everywhere, including
+# unauthenticated users. We'll use this to allow requests to the Frontend 
+# Service from the public Internet, as this is the intended behavior.
+#
+# This policy is attached directly to the Cloud Run service.
+data "google_iam_policy" "frontend" {
+  binding {
+    role = "roles/run.invoker"
+    members = [
+      "allUsers",
+    ]
+  }
+}
+
+# This is the attachment of the previous IAM policy to the Cloud Run service.
+resource "google_cloud_run_service_iam_policy" "frontend" {
   location = google_cloud_run_service.frontend.location
   project = google_cloud_run_service.frontend.project
   service = google_cloud_run_service.frontend.name
-  policy_data = data.google_iam_policy.noauth.policy_data
+  policy_data = data.google_iam_policy.frontend.policy_data
 }
 
 ###############################################################################
@@ -241,10 +257,10 @@ resource "google_pubsub_subscription" "worker_svc_events" {
   }
 }
 
-# This IAM policy grants the Cloud Run Invoker role to the service account used
-# by the Pub/Sub subscription, so that only this subscription can inovke the
-# worker service.
-data "google_iam_policy" "worker_pubsub" {
+# This IAM policy allows Cloud Run invocations from the Pub/Sub subscription.
+#
+# This policy is attached directly to the Cloud Run service.
+data "google_iam_policy" "worker" {
   binding {
     role = "roles/run.invoker"
     members = [
@@ -253,9 +269,10 @@ data "google_iam_policy" "worker_pubsub" {
   }
 }
 
-resource "google_cloud_run_service_iam_policy" "worker_pubsub" {
+# This is the attachment of the previous IAM policy to the Cloud Run service.
+resource "google_cloud_run_service_iam_policy" "worker" {
   location = google_cloud_run_service.worker.location
   project = google_cloud_run_service.worker.project
   service = google_cloud_run_service.worker.name
-  policy_data = data.google_iam_policy.worker_pubsub.policy_data
+  policy_data = data.google_iam_policy.worker.policy_data
 }

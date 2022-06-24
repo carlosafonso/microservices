@@ -1,6 +1,7 @@
 {
     "require": {
         "guzzlehttp/guzzle": "^7.4",
-        "google/auth": "^1.21"
+        "google/auth": "^1.21",
+        "google/cloud-pubsub": "^1.38"
     }
 }

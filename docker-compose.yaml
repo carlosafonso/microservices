@@ -10,6 +10,8 @@ services:
       - FONT_COLOR_SVC=${MICROSERVICES_FONT_COLOR_SVC:-font_color:8080}
       - FONT_SIZE_SVC=${MICROSERVICES_FONT_SIZE_SVC:-font_size:8080}
       - WORD_SVC=${MICROSERVICES_WORD_SVC:-word:80}
+      - PUBSUB_EVENTS_TOPIC=${MICROSERVICES_PUBSUB_EVENTS_TOPIC}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
   font_color:
     build: ./src/font-color
     ports:

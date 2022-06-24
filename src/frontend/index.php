@@ -3,12 +3,18 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use Google\Auth\ApplicationDefaultCredentials;
+use Google\Cloud\PubSub\PubSubClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 
 $fontColorSvcEndpoint = getenv('FONT_COLOR_SVC');
 $fontSizeSvcEndpoint = getenv('FONT_SIZE_SVC');
 $wordSvcEndpoint = getenv('WORD_SVC');
+
+$pubSubEventsTopic = getenv('PUBSUB_EVENTS_TOPIC');
+
+$pubSub = new PubSubClient();
+$topic = $pubSub->topic($pubSubEventsTopic);
 
 /**
  * Make an HTTP GET request to the given URL, signing the request in the
@@ -37,6 +43,14 @@ $sizeResponse = get($fontSizeSvcEndpoint);
 $word = json_decode($wordResponse);
 $color = json_decode($colorResponse);
 $size = json_decode($sizeResponse);
+
+// Publish an event into the Pub/Sub events topic.
+$eventPayload = [
+    'word' => $word->word,
+    'color' => $color->color,
+    'size' => $size->size,
+];
+$topic->publish(['data' => json_encode($eventPayload)]);
 
 ?>
 <!DOCTYPE html>

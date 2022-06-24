@@ -24,7 +24,7 @@ def index():
         return (f"Bad Request: {msg}", 400)
     
     time.sleep(SLEEP_SECONDS)
-    logging.getLogger().info("Processed message")
+    logging.getLogger().info("Processed message: %s" % envelope["message"])
     
     return ("", 204)
 
