@@ -276,3 +276,65 @@ resource "google_cloud_run_service_iam_policy" "worker" {
   service = google_cloud_run_service.worker.name
   policy_data = data.google_iam_policy.worker.policy_data
 }
+
+###############################################################################
+# Module: monitoring
+###############################################################################
+resource "google_monitoring_dashboard" "dashboard" {
+  dashboard_json = <<-EOF
+    {
+      "displayName": "Microservices",
+      "gridLayout": {
+        "columns": "1",
+        "widgets": [
+          {
+            "title": "Frontend Service - Response Latency - All Status Codes",
+            "xyChart": {
+              "dataSets": [
+                {
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_PERCENTILE_50",
+                        "crossSeriesReducer": "REDUCE_MAX"
+                      }
+                    }
+                  },
+                  "legendTemplate": "P50"                  
+                },
+                {
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                        "crossSeriesReducer": "REDUCE_MAX"
+                      }
+                    }
+                  },
+                  "legendTemplate": "P95"
+                },
+                {
+                  "timeSeriesQuery": {
+                    "timeSeriesFilter": {
+                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+                      "aggregation": {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_PERCENTILE_99",
+                        "crossSeriesReducer": "REDUCE_MAX"
+                      }
+                    }
+                  },
+                  "legendTemplate": "P99"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  EOF
+}
