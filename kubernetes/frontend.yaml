@@ -19,11 +19,11 @@ spec:
         - containerPort: 8080
         env:
           - name: FONT_COLOR_SVC
-            value: font-color
+            value: font-color:80
           - name: FONT_SIZE_SVC
-            value: font-size
+            value: font-size:80
           - name: WORD_SVC
-            value: word
+            value: word:80
 ---
 apiVersion: v1
 kind: Service
