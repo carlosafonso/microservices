@@ -12,6 +12,7 @@ $fontSizeSvcEndpoint = getenv('FONT_SIZE_SVC');
 $wordSvcEndpoint = getenv('WORD_SVC');
 
 $pubSubEventsTopic = getenv('PUBSUB_EVENTS_TOPIC');
+$emitToPubSub = $pubSubEventsTopic !== false && !empty($pubSubEventsTopic);
 
 $pubSub = new PubSubClient();
 $topic = $pubSub->topic($pubSubEventsTopic);
@@ -44,13 +45,15 @@ $word = json_decode($wordResponse);
 $color = json_decode($colorResponse);
 $size = json_decode($sizeResponse);
 
-// Publish an event into the Pub/Sub events topic.
-$eventPayload = [
-    'word' => $word->word,
-    'color' => $color->color,
-    'size' => $size->size,
-];
-$topic->publish(['data' => json_encode($eventPayload)]);
+if ($emitToPubSub) {
+    // Publish an event into the Pub/Sub events topic.
+    $eventPayload = [
+        'word' => $word->word,
+        'color' => $color->color,
+        'size' => $size->size,
+    ];
+    $topic->publish(['data' => json_encode($eventPayload)]);
+}
 
 ?>
 <!DOCTYPE html>
