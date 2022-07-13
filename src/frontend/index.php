@@ -2,10 +2,8 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Google\Auth\ApplicationDefaultCredentials;
+use Afonso\Gcp\Demos\Microservices\HttpClient;
 use Google\Cloud\PubSub\PubSubClient;
-use GuzzleHttp\Client;
-use GuzzleHttp\HandlerStack;
 
 $fontColorSvcEndpoint = getenv('FONT_COLOR_SVC');
 $fontSizeSvcEndpoint = getenv('FONT_SIZE_SVC');
@@ -14,38 +12,20 @@ $wordSvcEndpoint = getenv('WORD_SVC');
 $pubSubEventsTopic = getenv('PUBSUB_EVENTS_TOPIC');
 $emitToPubSub = $pubSubEventsTopic !== false && !empty($pubSubEventsTopic);
 
-$pubSub = new PubSubClient();
-$topic = $pubSub->topic($pubSubEventsTopic);
+$httpClient = new HttpClient();
 
-/**
- * Make an HTTP GET request to the given URL, signing the request in the
- * process.
- */
-function get($url) {
-    // We can use the URL as the audience for now, because the audience should
-    // be the root URL of the Cloud Run service we are invoking, which holds
-    // true for the time being.
-    $middleware = ApplicationDefaultCredentials::getIdTokenMiddleware($url);
-    $stack = HandlerStack::create();
-    $stack->push($middleware);
-
-    $client = new Client([
-        'handler' => $stack,
-        'auth' => 'google_auth',
-    ]);
-
-    return $client->get($url)->getBody();
-}
-
-$wordResponse = get($wordSvcEndpoint);
-$colorResponse = get($fontColorSvcEndpoint);
-$sizeResponse = get($fontSizeSvcEndpoint);
+$wordResponse = $httpClient->get($wordSvcEndpoint);
+$colorResponse = $httpClient->get($fontColorSvcEndpoint);
+$sizeResponse = $httpClient->get($fontSizeSvcEndpoint);
 
 $word = json_decode($wordResponse);
 $color = json_decode($colorResponse);
 $size = json_decode($sizeResponse);
 
 if ($emitToPubSub) {
+    $pubSub = new PubSubClient();
+    $topic = $pubSub->topic($pubSubEventsTopic);
+
     // Publish an event into the Pub/Sub events topic.
     $eventPayload = [
         'word' => $word->word,

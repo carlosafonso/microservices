@@ -1,0 +1,41 @@
+<?php
+
+namespace Afonso\Gcp\Demos\Microservices;
+
+use Google\Auth\ApplicationDefaultCredentials;
+use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+
+class HttpClient
+{
+    /**
+     * Make an HTTP GET request to the given URL, signing the request in the
+     * process if the URL happens to be a Cloud Run service.
+     */
+    public function get($url)
+    {
+        $client = null;
+        if (strpos($url, '.a.run.app') !== false) {
+            // URL is a Cloud Run service. Use an HTTP client that
+            // automatically signs the URL so that requests to Cloud Run are
+            // authorized.
+            //
+            // We can use the URL as the audience for now, because the
+            // audience should be the root URL of the Cloud Run service we are
+            // invoking, which holds true for the time being.
+            $middleware = ApplicationDefaultCredentials::getIdTokenMiddleware($url);
+            $stack = HandlerStack::create();
+            $stack->push($middleware);
+
+            $client = new Client([
+                'handler' => $stack,
+                'auth' => 'google_auth',
+            ]);
+        } else {
+            // URL is NOT a Cloud Run service. Use a generic HTTP client.
+            $client = new Client();
+        }
+
+        return $client->get($url)->getBody();
+    }
+}

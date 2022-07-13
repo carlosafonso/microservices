@@ -3,5 +3,10 @@
         "guzzlehttp/guzzle": "^7.4",
         "google/auth": "^1.21",
         "google/cloud-pubsub": "^1.38"
+    },
+    "autoload": {
+        "psr-4": {
+            "Afonso\\Gcp\\Demos\\Microservices\\": "src/"
+        }
     }
 }
