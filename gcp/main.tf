@@ -193,7 +193,7 @@ resource "google_cloud_run_service" "frontend" {
 }
 
 # This IAM policy allows Cloud Run invocations from everywhere, including
-# unauthenticated users. We'll use this to allow requests to the Frontend 
+# unauthenticated users. We'll use this to allow requests to the Frontend
 # Service from the public Internet, as this is the intended behavior.
 #
 # This policy is attached directly to the Cloud Run service.
@@ -302,7 +302,7 @@ resource "google_monitoring_dashboard" "dashboard" {
                       }
                     }
                   },
-                  "legendTemplate": "P50"                  
+                  "legendTemplate": "P50"
                 },
                 {
                   "timeSeriesQuery": {
