@@ -17,8 +17,15 @@ provider "google" {
 # Module: network
 ###############################################################################
 resource "google_compute_network" "vpc" {
-  name                    = "vpc"
+  name = "microservices"
   auto_create_subnetworks = "false"
+}
+
+resource "google_compute_subnetwork" "subnetwork" {
+  name = "microservices"
+  ip_cidr_range = "10.0.0.0/24"
+  region = var.region
+  network = google_compute_network.vpc.id
 }
 
 ###############################################################################
@@ -39,6 +46,54 @@ data "google_iam_policy" "allow_frontend_only" {
     role = "roles/run.invoker"
     members = [
       "serviceAccount:${google_service_account.frontend_svc.email}",
+    ]
+  }
+}
+
+# The Artifact Registry repo for the Frontend Service image.
+resource "google_artifact_registry_repository" "frontend" {
+  provider = google-beta
+  location = var.region
+  repository_id = "microservices"
+  format = "DOCKER"
+}
+
+###############################################################################
+# Module: GKE
+###############################################################################
+resource "google_service_account" "gke" {
+  account_id   = "microservices-gke"
+  display_name = "microservices - Service account for the GKE cluster nodes"
+}
+
+resource "google_project_iam_member" "gke_artifact_registry_viewer" {
+  project = var.project
+  role = "roles/artifactregistry.reader"
+  member = "serviceAccount:${google_service_account.gke.email}"
+}
+
+resource "google_container_cluster" "cluster" {
+  name = "microservices"
+  location = var.region
+  network = google_compute_network.vpc.self_link
+  subnetwork = google_compute_subnetwork.subnetwork.self_link
+
+  remove_default_node_pool = true
+  initial_node_count = 1
+
+  networking_mode = "VPC_NATIVE"
+  ip_allocation_policy {}
+}
+
+resource "google_container_node_pool" "nodepool" {
+  name = "microservices"
+  cluster = google_container_cluster.cluster.id
+  node_count = 1
+
+  node_config {
+    service_account = google_service_account.gke.email
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
     ]
   }
 }
