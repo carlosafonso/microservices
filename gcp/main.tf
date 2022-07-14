@@ -159,6 +159,22 @@ resource "google_clouddeploy_target" "staging" {
   }
 }
 
+resource "google_clouddeploy_target" "prod" {
+  location = var.region
+  name = "microservices-frontend-prod"
+
+  gke {
+    cluster = google_container_cluster.cluster.id
+  }
+
+  execution_configs {
+    usages = ["RENDER", "DEPLOY"]
+    service_account = google_service_account.clouddeploy.email
+  }
+
+  require_approval = true
+}
+
 resource "google_clouddeploy_delivery_pipeline" "pipeline" {
   location = var.region
   name = "microservices-frontend"
@@ -166,7 +182,12 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
   serial_pipeline {
     stages {
       target_id = "microservices-frontend-staging"
-      #profiles = ["prod"]
+      profiles = ["staging"]
+    }
+
+    stages {
+      target_id = "microservices-frontend-prod"
+      profiles = ["prod"]
     }
   }
 }

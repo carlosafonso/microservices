@@ -30,6 +30,11 @@ profiles:
     kustomize:
       paths:
       - kubernetes/overlays/staging
+- name: prod
+  deploy:
+    kustomize:
+      paths:
+      - kubernetes/overlays/prod
 portForward:
   - resourceType: service
     resourceName: frontend
