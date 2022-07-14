@@ -1,0 +1,24 @@
+steps:
+  - name: 'gcr.io/k8s-skaffold/skaffold'
+    id: 'Build artifact'
+    args:
+      - 'skaffold'
+      - 'build'
+      - '--interactive=false'
+      - '--build-image=frontend'
+      - '--default-repo=${_DEFAULT_REPO}'
+      - '--file-output=/workspace/artifacts.json'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Create release'
+    entrypoint: gcloud
+    args:
+      [
+        'deploy', 'releases', 'create', 'rel-${SHORT_SHA}-$$DATE',
+        '--delivery-pipeline', 'microservices-frontend',
+        '--region', 'us-central1',
+        '--build-artifacts', '/workspace/artifacts.json'
+      ]
+
+options:
+  logging: CLOUD_LOGGING_ONLY

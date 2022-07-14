@@ -50,8 +50,13 @@ data "google_iam_policy" "allow_frontend_only" {
   }
 }
 
+# The Cloud Source Repository for the Frontend Service code.
+resource "google_sourcerepo_repository" "frontend" {
+  name = "microservices-frontend"
+}
+
 # The Artifact Registry repo for the Frontend Service image.
-resource "google_artifact_registry_repository" "frontend" {
+resource "google_artifact_registry_repository" "repo" {
   provider = google-beta
   location = var.region
   repository_id = "microservices"
@@ -95,6 +100,74 @@ resource "google_container_node_pool" "nodepool" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+  }
+}
+
+resource "google_service_account" "cloudbuild" {
+  account_id   = "microservices-cloudbuild"
+  display_name = "microservices - Service account for running Cloud Build builds"
+}
+
+# To-Do: we probably want to narrow this down to just the required permissions,
+# including the clouddeploy.released role (https://cloud.google.com/deploy/docs/integrating-ci#calling_from_your_ci_pipeline)
+# for creating a Cloud Deploy release after a successful build.
+resource "google_project_iam_member" "cloudbuild" {
+  project = var.project
+  role = "roles/owner"
+  member = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+
+resource "google_service_account" "clouddeploy" {
+  account_id   = "microservices-clouddeploy"
+  display_name = "microservices - Service account for running Cloud Deploy delivery pipelines"
+}
+
+# To-Do: we probably want to narrow this down to just the required permissions.
+resource "google_project_iam_member" "clouddeploy" {
+  project = var.project
+  role = "roles/owner"
+  member = "serviceAccount:${google_service_account.clouddeploy.email}"
+}
+
+resource "google_cloudbuild_trigger" "trigger" {
+  name = "microservices-frontend"
+  service_account = google_service_account.cloudbuild.id
+
+  trigger_template {
+    repo_name = split("/repos/", google_sourcerepo_repository.frontend.id)[1]
+    branch_name = ".*"
+  }
+
+  substitutions = {
+    _DEFAULT_REPO = "${var.region}-docker.pkg.dev/${var.project}/microservices"
+  }
+
+  filename = "cloudbuild.yaml"
+}
+
+resource "google_clouddeploy_target" "staging" {
+  location = var.region
+  name = "microservices-frontend-staging"
+
+  gke {
+    cluster = google_container_cluster.cluster.id
+  }
+
+  execution_configs {
+    usages = ["RENDER", "DEPLOY"]
+    service_account = google_service_account.clouddeploy.email
+  }
+}
+
+resource "google_clouddeploy_delivery_pipeline" "pipeline" {
+  location = var.region
+  name = "microservices-frontend"
+
+  serial_pipeline {
+    stages {
+      target_id = "microservices-frontend-staging"
+      #profiles = ["prod"]
+    }
   }
 }
 
