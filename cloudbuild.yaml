@@ -14,7 +14,7 @@ steps:
     entrypoint: gcloud
     args:
       [
-        'deploy', 'releases', 'create', 'rel-${SHORT_SHA}-$$DATE',
+        'deploy', 'releases', 'create', 'r-${SHORT_SHA}-$$DATE$$TIME',
         '--delivery-pipeline', 'microservices-frontend',
         '--region', 'us-central1',
         '--build-artifacts', '/workspace/artifacts.json'
