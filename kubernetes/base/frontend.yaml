@@ -18,6 +18,8 @@ spec:
         ports:
         - containerPort: 8080
         env:
+          - name: MICROSERVICES_ENV
+            value: dev
           - name: FONT_COLOR_SVC
             value: font-color:80
           - name: FONT_SIZE_SVC

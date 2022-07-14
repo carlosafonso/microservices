@@ -21,12 +21,15 @@ build:
     docker:
       dockerfile: Dockerfile
 deploy:
-  kubectl:
-    manifests:
-    - kubernetes/font-color.yaml
-    - kubernetes/font-size.yaml
-    - kubernetes/frontend.yaml
-    - kubernetes/word.yaml
+  kustomize:
+    paths:
+    - kubernetes/base
+profiles:
+- name: staging
+  deploy:
+    kustomize:
+      paths:
+      - kubernetes/overlays/staging
 portForward:
   - resourceType: service
     resourceName: frontend
