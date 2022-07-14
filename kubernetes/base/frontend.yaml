@@ -6,11 +6,13 @@ spec:
   selector:
     matchLabels:
       app: frontend
+      env: dev
   replicas: 2
   template:
     metadata:
       labels:
         app: frontend
+        env: dev
     spec:
       containers:
       - name: frontend
@@ -34,6 +36,7 @@ metadata:
 spec:
   selector:
     app: frontend
+    env: dev
   type: LoadBalancer
   ports:
    -  protocol: TCP
