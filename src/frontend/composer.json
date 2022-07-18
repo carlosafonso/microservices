@@ -2,7 +2,9 @@
     "require": {
         "guzzlehttp/guzzle": "^7.4",
         "google/auth": "^1.21",
-        "google/cloud-pubsub": "^1.38"
+        "google/cloud-pubsub": "^1.38",
+        "league/plates": "^3.4",
+        "monolog/monolog": "^2.7"
     },
     "autoload": {
         "psr-4": {

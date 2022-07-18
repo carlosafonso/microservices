@@ -9,4 +9,5 @@ FROM public.ecr.aws/m0i9w4q3/alpine-nginx-php7:2.0.1
 COPY --from=composer /app/vendor/ /var/www/html/vendor/
 
 COPY src/ /var/www/html/src/
+COPY templates/ /var/www/html/templates/
 COPY index.php /var/www/html
