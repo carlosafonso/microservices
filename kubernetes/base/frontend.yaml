@@ -28,6 +28,14 @@ spec:
             value: font-size:80
           - name: WORD_SVC
             value: word:80
+          - name: MSVC_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MSVC_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
 ---
 apiVersion: v1
 kind: Service

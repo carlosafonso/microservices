@@ -20,6 +20,9 @@ if (empty($env)) {
 
 $log->info("Environment is $env");
 
+[$podName, $podIp] = [getenv('MSVC_POD_NAME'), getenv('MSVC_POD_IP')];
+$log->info("Retrieved pod name and IP", ['pod_name' => $podName, 'pod_ip' => $podIp]);
+
 $fontColorSvcEndpoint = getenv('FONT_COLOR_SVC');
 $fontSizeSvcEndpoint = getenv('FONT_SIZE_SVC');
 $wordSvcEndpoint = getenv('WORD_SVC');
@@ -63,4 +66,16 @@ if ($emitToPubSub) {
     $log->info("Sent event to Pub/Sub");
 }
 
-echo($templates->render('index', ['color' => $color, 'size' => $size, 'word' => $word, 'env' => $env]));
+echo(
+    $templates->render(
+        'index',
+        [
+            'color' => $color,
+            'size' => $size,
+            'word' => $word,
+            'env' => $env,
+            'podName' => $podName,
+            'podIp' => $podIp,
+        ]
+    )
+);

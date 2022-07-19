@@ -15,12 +15,14 @@
 
         body {
             display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         span.env {
-            position: absolute;
             padding: 1em 2em;
-            border-radius: 0 0 10px 0;
+            border-radius: 10px;
             background-color: gray;
             color: white;
         }
@@ -38,11 +40,7 @@
         }
 
         span.word {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            margin: 0 auto;
-            text-align: center;
+            line-height: 200px;
             color: <?php echo($color->color); ?>;
             font-size: <?php echo($size->size); ?>px;
         }
@@ -51,6 +49,7 @@
 <body>
     <span class="env <?php echo($env); ?>">You are currently viewing the <strong><?php echo($env); ?></strong> environment.</span>
     <span class="word"><?php echo($word->word); ?></span>
+    <span>This request has been served from pod <strong><?php echo($podName); ?></strong> with IP <strong><?php echo($podIp); ?></strong>.</span>
     <script type="text/javascript">
         window.onload = () => {
             // Only reload if query string has the right parameter.
