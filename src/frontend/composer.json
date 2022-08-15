@@ -4,7 +4,9 @@
         "google/auth": "^1.21",
         "google/cloud-pubsub": "^1.38",
         "league/plates": "^3.4",
-        "monolog/monolog": "^2.7"
+        "monolog/monolog": "^2.7",
+        "react/http": "^1.6",
+        "react/socket": "^1.11"
     },
     "autoload": {
         "psr-4": {
