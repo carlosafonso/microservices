@@ -202,7 +202,7 @@ resource "google_cloud_run_service" "font_color" {
   template {
     spec {
       containers {
-        image = "gcr.io/${var.project}/microservices-font-color:latest"
+        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-font-color:latest"
         ports {
           container_port = 8080
         }
@@ -233,7 +233,7 @@ resource "google_cloud_run_service" "font_size" {
   template {
     spec {
       containers {
-        image = "gcr.io/${var.project}/microservices-font-size:latest"
+        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-font-size:latest"
         ports {
           container_port = 8080
         }
@@ -264,7 +264,7 @@ resource "google_cloud_run_service" "word" {
   template {
     spec {
       containers {
-        image = "gcr.io/${var.project}/microservices-word:latest"
+        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-word:latest"
         ports {
           container_port = 80
         }
@@ -311,7 +311,7 @@ resource "google_cloud_run_service" "frontend" {
       service_account_name = google_service_account.frontend_svc.email
 
       containers {
-        image = "gcr.io/${var.project}/microservices-frontend:latest"
+        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-frontend:latest"
         ports {
           container_port = 8080
         }
@@ -373,7 +373,7 @@ resource "google_cloud_run_service" "worker" {
   template {
     spec {
       containers {
-        image = "gcr.io/${var.project}/microservices-worker:latest"
+        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-worker:latest"
       }
     }
   }
