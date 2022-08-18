@@ -316,6 +316,10 @@ resource "google_cloud_run_service" "frontend" {
           container_port = 8080
         }
         env {
+            name = "MICROSERVICES_ENV"
+            value = "prod"
+        }
+        env {
           name = "FONT_COLOR_SVC"
           value = google_cloud_run_service.font_color.status[0].url
         }
