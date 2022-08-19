@@ -145,6 +145,7 @@ resource "google_cloudbuild_trigger" "trigger" {
 
   substitutions = {
     _DEFAULT_REPO = "${var.region}-docker.pkg.dev/${var.project}/microservices"
+    _REGION = "${var.region}"
   }
 
   filename = "cloudbuild.yaml"

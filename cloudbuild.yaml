@@ -16,7 +16,7 @@ steps:
       [
         'deploy', 'releases', 'create', 'r-${SHORT_SHA}-$$DATE$$TIME',
         '--delivery-pipeline', 'microservices-frontend',
-        '--region', 'us-central1',
+        '--region', '$_REGION',
         '--build-artifacts', '/workspace/artifacts.json'
       ]
 
