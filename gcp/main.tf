@@ -53,6 +53,12 @@ data "google_iam_policy" "allow_frontend_only" {
 # The Cloud Source Repository for the Frontend Service code.
 resource "google_sourcerepo_repository" "frontend" {
   name = "microservices-frontend"
+
+  provisioner "local-exec" {
+    # Need to execute this from the repo root folder.
+    working_dir = "../"
+    command = "./gcp/scripts/push-code-to-source-repository.sh ${self.url}"
+  }
 }
 
 # The Artifact Registry repo for the Frontend Service image.
