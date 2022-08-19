@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 if [ $# -lt 1 ]; then
     echo "Please specify the GCP region where the Artifact Registry repository is located (e.g., us-central1)"

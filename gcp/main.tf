@@ -58,9 +58,14 @@ resource "google_sourcerepo_repository" "frontend" {
 # The Artifact Registry repo for the Frontend Service image.
 resource "google_artifact_registry_repository" "repo" {
   provider = google-beta
+  project = var.project
   location = var.region
   repository_id = "microservices"
   format = "DOCKER"
+
+  provisioner "local-exec" {
+    command = "./scripts/push-images-to-container-registry.sh ${var.region}"
+  }
 }
 
 ###############################################################################
@@ -214,6 +219,21 @@ resource "google_cloud_run_service" "font_color" {
     percent         = 100
     latest_revision = true
   }
+
+  # We must wait until the Artifact Registry repository is created, because it
+  # has a local provisioner which will push the images after pulling them from
+  # the authoritative source (Docker Hub).
+  #
+  # If there was a way to obtain Artifact Registry repository URLs from
+  # Terraform attributes, the dependency between Cloud Run services and the
+  # repository would be implicit. However, Terraform does not seem to expose
+  # such attributes so the image URLs are constructed by hand. Thus, the
+  # dependency must be declared explicitly.
+  #
+  # (If no dependency was declared, the Cloud Run services would be created in
+  # parallel and the images might not be present by the time Cloud Run attempts
+  # to pull them, leading to a stack creation error.)
+  depends_on = [google_artifact_registry_repository.repo]
 }
 
 resource "google_cloud_run_service_iam_policy" "font_color_noauth" {
@@ -245,6 +265,9 @@ resource "google_cloud_run_service" "font_size" {
     percent         = 100
     latest_revision = true
   }
+
+  # See comment in google_cloud_run_service.font_color.
+  depends_on = [google_artifact_registry_repository.repo]
 }
 
 resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
@@ -276,6 +299,9 @@ resource "google_cloud_run_service" "word" {
     percent         = 100
     latest_revision = true
   }
+
+  # See comment in google_cloud_run_service.font_color.
+  depends_on = [google_artifact_registry_repository.repo]
 }
 
 resource "google_cloud_run_service_iam_policy" "word_svc" {
@@ -343,6 +369,9 @@ resource "google_cloud_run_service" "frontend" {
     percent         = 100
     latest_revision = true
   }
+
+  # See comment in google_cloud_run_service.font_color.
+  depends_on = [google_artifact_registry_repository.repo]
 }
 
 # This IAM policy allows Cloud Run invocations from everywhere, including
@@ -386,6 +415,9 @@ resource "google_cloud_run_service" "worker" {
     percent         = 100
     latest_revision = true
   }
+
+  # See comment in google_cloud_run_service.font_color.
+  depends_on = [google_artifact_registry_repository.repo]
 }
 
 resource "google_service_account" "pubsub_events_worker_svc_subscription" {
