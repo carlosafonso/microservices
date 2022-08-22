@@ -49,7 +49,9 @@
 <body>
     <span class="env <?php echo($env); ?>">You are currently viewing the <strong><?php echo($env); ?></strong> environment.</span>
     <span class="word"><?php echo($word->word); ?></span>
-    <span>This request has been served from pod <strong><?php echo($podName); ?></strong> with IP <strong><?php echo($podIp); ?></strong>.</span>
+    <?php if (!empty($podName) && !empty($podIp)): ?>
+        <span>This request has been served from pod <strong><?php echo($podName); ?></strong> with IP <strong><?php echo($podIp); ?></strong>.</span>
+    <?php endif; ?>
     <script type="text/javascript">
         window.onload = () => {
             // Only reload if query string has the right parameter.
