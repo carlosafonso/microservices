@@ -82,9 +82,17 @@ resource "google_service_account" "gke" {
   display_name = "microservices - Service account for the GKE cluster nodes"
 }
 
+# This IAM binding allows GKE nodes to download images from Artifact Registry.
 resource "google_project_iam_member" "gke_artifact_registry_viewer" {
   project = var.project
   role = "roles/artifactregistry.reader"
+  member = "serviceAccount:${google_service_account.gke.email}"
+}
+
+# This IAM binding allows GKE nodes to publish messages to Pub/Sub.
+resource "google_project_iam_member" "gke_pubsub_publisher" {
+  project = var.project
+  role = "roles/pubsub.publisher"
   member = "serviceAccount:${google_service_account.gke.email}"
 }
 

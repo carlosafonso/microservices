@@ -23,6 +23,8 @@ spec:
               value: font-size-prod:80
             - name: WORD_SVC
               value: word-prod:80
+            - name: PUBSUB_EVENTS_TOPIC
+              value: events
 ---
 apiVersion: v1
 kind: Service
