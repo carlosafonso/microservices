@@ -17,6 +17,10 @@ spec:
         image: carlosafonso/microservices-font-size
         ports:
         - containerPort: 8080
+        resources:
+          requests:
+            cpu: 125m
+            memory: 256Mi
 ---
 apiVersion: v1
 kind: Service
