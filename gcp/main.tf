@@ -112,13 +112,17 @@ resource "google_container_cluster" "cluster" {
 resource "google_container_node_pool" "nodepool" {
   name = "microservices"
   cluster = google_container_cluster.cluster.id
-  node_count = 1
 
   node_config {
     service_account = google_service_account.gke.email
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+  }
+
+  autoscaling {
+    min_node_count = 0
+    max_node_count = 2
   }
 }
 
