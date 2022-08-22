@@ -17,6 +17,10 @@ spec:
         image: carlosafonso/microservices-word
         ports:
         - containerPort: 80
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
 ---
 apiVersion: v1
 kind: Service
