@@ -6,7 +6,11 @@ This folder contains an implementation of the microservices demo on top of Googl
 
 ## Architecture
 
-The current implementation deploys all services on Cloud Run. The Worker Service is push-subscribed to a Pub/Sub topic.
+The current implementation deploys all services on two compute platforms: Google Kubernetes Engine (GKE) and Google Cloud Run. The Cloud Run section also publishes events to Pub/Sub, which are handled by the Worker service (also running on Cloud Run).
+
+A CI/CD pipeline deploys the Frontend service to GKE environments when a developer pushes a new change.
+
+The following diagram shows the overall architecture of this demo:
 
 ![Architecture diagram](architecture.png)
 
