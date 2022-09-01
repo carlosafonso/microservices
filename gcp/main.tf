@@ -13,12 +13,40 @@ provider "google" {
   zone    = var.zone
 }
 
+# This module will ensure that all the necessary GCP APIs are enabled. You'll
+# see quite a bit of "depends_on" attributes scattered throughout other
+# resources, as we need to wait until the services are enabled before
+# proceeding. Once the rest of components are refactored into separate modules
+# this dependency declaration will be simplified.
+module "project_services" {
+  source  = "terraform-google-modules/project-factory/google//modules/project_services"
+  version = "~> 13.0"
+
+  project_id  = var.project
+  enable_apis = var.enable_apis
+
+  activate_apis = [
+    "artifactregistry.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "clouddeploy.googleapis.com",
+    "container.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "pubsub.googleapis.com",
+    "run.googleapis.com",
+    "sourcerepo.googleapis.com"
+  ]
+  disable_services_on_destroy = false
+}
+
 ###############################################################################
 # Module: network
 ###############################################################################
 resource "google_compute_network" "vpc" {
   name = "microservices"
   auto_create_subnetworks = "false"
+
+  depends_on = [module.project_services]
 }
 
 resource "google_compute_subnetwork" "subnetwork" {
@@ -37,6 +65,8 @@ resource "google_compute_subnetwork" "subnetwork" {
 # also e.g. send events into BigQuery for analytical consumption in the future.
 resource "google_pubsub_topic" "events" {
   name = "events"
+
+  depends_on = [module.project_services]
 }
 
 # This IAM policy only allows Cloud Run invocations from the Frontend Service's
@@ -59,6 +89,8 @@ resource "google_sourcerepo_repository" "frontend" {
     working_dir = "../"
     command = "./gcp/scripts/push-code-to-source-repository.sh ${self.url}"
   }
+
+  depends_on = [module.project_services]
 }
 
 # The Artifact Registry repo for the Frontend Service image.
@@ -72,6 +104,8 @@ resource "google_artifact_registry_repository" "repo" {
   provisioner "local-exec" {
     command = "./scripts/push-images-to-container-registry.sh ${var.region}"
   }
+
+  depends_on = [module.project_services]
 }
 
 ###############################################################################
@@ -107,6 +141,8 @@ resource "google_container_cluster" "cluster" {
 
   networking_mode = "VPC_NATIVE"
   ip_allocation_policy {}
+
+  depends_on = [module.project_services]
 }
 
 resource "google_container_node_pool" "nodepool" {
@@ -167,6 +203,8 @@ resource "google_cloudbuild_trigger" "trigger" {
   }
 
   filename = "cloudbuild.yaml"
+
+  depends_on = [module.project_services]
 }
 
 resource "google_clouddeploy_target" "staging" {
@@ -181,6 +219,8 @@ resource "google_clouddeploy_target" "staging" {
     usages = ["RENDER", "DEPLOY"]
     service_account = google_service_account.clouddeploy.email
   }
+
+  depends_on = [module.project_services]
 }
 
 resource "google_clouddeploy_target" "prod" {
@@ -197,6 +237,8 @@ resource "google_clouddeploy_target" "prod" {
   }
 
   require_approval = true
+
+  depends_on = [module.project_services]
 }
 
 resource "google_clouddeploy_delivery_pipeline" "pipeline" {
@@ -214,6 +256,8 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
       profiles = ["prod"]
     }
   }
+
+  depends_on = [module.project_services]
 }
 
 ###############################################################################
@@ -252,7 +296,13 @@ resource "google_cloud_run_service" "font_color" {
   # (If no dependency was declared, the Cloud Run services would be created in
   # parallel and the images might not be present by the time Cloud Run attempts
   # to pull them, leading to a stack creation error.)
-  depends_on = [google_artifact_registry_repository.repo]
+  #
+  # Note that we are also declaring a dependency on the project_services
+  # module, which ensures that the required GCP APIs are enabled.
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
 }
 
 resource "google_cloud_run_service_iam_policy" "font_color_noauth" {
@@ -286,7 +336,10 @@ resource "google_cloud_run_service" "font_size" {
   }
 
   # See comment in google_cloud_run_service.font_color.
-  depends_on = [google_artifact_registry_repository.repo]
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
 }
 
 resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
@@ -320,7 +373,10 @@ resource "google_cloud_run_service" "word" {
   }
 
   # See comment in google_cloud_run_service.font_color.
-  depends_on = [google_artifact_registry_repository.repo]
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
 }
 
 resource "google_cloud_run_service_iam_policy" "word_svc" {
@@ -390,7 +446,10 @@ resource "google_cloud_run_service" "frontend" {
   }
 
   # See comment in google_cloud_run_service.font_color.
-  depends_on = [google_artifact_registry_repository.repo]
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
 }
 
 # This IAM policy allows Cloud Run invocations from everywhere, including
@@ -436,7 +495,10 @@ resource "google_cloud_run_service" "worker" {
   }
 
   # See comment in google_cloud_run_service.font_color.
-  depends_on = [google_artifact_registry_repository.repo]
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
 }
 
 resource "google_service_account" "pubsub_events_worker_svc_subscription" {
@@ -541,4 +603,6 @@ resource "google_monitoring_dashboard" "dashboard" {
       }
     }
   EOF
+
+  depends_on = [module.project_services]
 }

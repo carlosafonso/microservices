@@ -26,17 +26,13 @@ All commands must be run from the `gcp/` folder unless stated otherwise.
     ```
 
 3. Edit `terraform.tfvars` and set the apporpriate values.
-4. Issue the following command to enable the required GCP APIs:
-
-    ```
-    ./scripts/enable-services.sh
-    ```
-
-5. Deploy the Terraform template:
+4. Deploy the Terraform template:
 
     ```
     terraform apply -auto-approve
     ```
+
+    > **NOTE:** The Terraform module will automatically enable the necessary Google Cloud APIs.
 
 ## Running the demo
 
