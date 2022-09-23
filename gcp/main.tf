@@ -74,7 +74,7 @@ data "google_iam_policy" "allow_frontend_only" {
   binding {
     role = "roles/run.invoker"
     members = [
-      "serviceAccount:${google_service_account.frontend_svc.email}",
+      "serviceAccount:${google_service_account.gke.email}",
     ]
   }
 }
@@ -260,18 +260,18 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
 }
 
 ###############################################################################
-# Module: font-color service
+# Module: word service
 ###############################################################################
-resource "google_cloud_run_service" "font_color" {
-  name     = "font-color"
+resource "google_cloud_run_service" "word" {
+  name     = "word"
   location = var.gcp_region
 
   template {
     spec {
       containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-font-color:latest"
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-word:latest"
         ports {
-          container_port = 8080
+          container_port = 80
         }
       }
     }
@@ -304,173 +304,11 @@ resource "google_cloud_run_service" "font_color" {
   ]
 }
 
-resource "google_cloud_run_service_iam_policy" "font_color_noauth" {
-  location = google_cloud_run_service.font_color.location
-  project = google_cloud_run_service.font_color.project
-  service = google_cloud_run_service.font_color.name
-  policy_data = data.google_iam_policy.allow_frontend_only.policy_data
-}
-
-###############################################################################
-# Module: font-size service
-###############################################################################
-resource "google_cloud_run_service" "font_size" {
-  name     = "font-size"
-  location = var.gcp_region
-
-  template {
-    spec {
-      containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-font-size:latest"
-        ports {
-          container_port = 8080
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  # See comment in google_cloud_run_service.font_color.
-  depends_on = [
-    google_artifact_registry_repository.repo,
-    module.project_services
-  ]
-}
-
-resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
-  location = google_cloud_run_service.font_size.location
-  project = google_cloud_run_service.font_size.project
-  service = google_cloud_run_service.font_size.name
-  policy_data = data.google_iam_policy.allow_frontend_only.policy_data
-}
-
-###############################################################################
-# Module: word service
-###############################################################################
-resource "google_cloud_run_service" "word" {
-  name     = "word"
-  location = var.gcp_region
-
-  template {
-    spec {
-      containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-word:latest"
-        ports {
-          container_port = 80
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  # See comment in google_cloud_run_service.font_color.
-  depends_on = [
-    google_artifact_registry_repository.repo,
-    module.project_services
-  ]
-}
-
 resource "google_cloud_run_service_iam_policy" "word_svc" {
   location = google_cloud_run_service.word.location
   project = google_cloud_run_service.word.project
   service = google_cloud_run_service.word.name
   policy_data = data.google_iam_policy.allow_frontend_only.policy_data
-}
-
-###############################################################################
-# Module: frontend service
-###############################################################################
-resource "google_service_account" "frontend_svc" {
-  account_id = "frontend-svc"
-  display_name = "Frontend Service"
-}
-
-# This IAM policy allows the Frontend Service to publish messages into Pub/Sub.
-resource "google_project_iam_binding" "frontend_svc_account" {
-  project = var.gcp_project_id
-  role = "roles/pubsub.publisher"
-  members = [
-      "serviceAccount:${google_service_account.frontend_svc.email}",
-  ]
-}
-
-resource "google_cloud_run_service" "frontend" {
-  name     = "frontend"
-  location = var.gcp_region
-
-  template {
-    spec {
-      service_account_name = google_service_account.frontend_svc.email
-
-      containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-frontend:latest"
-        ports {
-          container_port = 8080
-        }
-        env {
-            name = "MICROSERVICES_ENV"
-            value = "prod"
-        }
-        env {
-          name = "FONT_COLOR_SVC"
-          value = google_cloud_run_service.font_color.status[0].url
-        }
-        env {
-          name = "FONT_SIZE_SVC"
-          value = google_cloud_run_service.font_size.status[0].url
-        }
-        env {
-          name = "WORD_SVC"
-          value = google_cloud_run_service.word.status[0].url
-        }
-        env {
-          name = "PUBSUB_EVENTS_TOPIC"
-          value = google_pubsub_topic.events.name
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  # See comment in google_cloud_run_service.font_color.
-  depends_on = [
-    google_artifact_registry_repository.repo,
-    module.project_services
-  ]
-}
-
-# This IAM policy allows Cloud Run invocations from everywhere, including
-# unauthenticated users. We'll use this to allow requests to the Frontend
-# Service from the public Internet, as this is the intended behavior.
-#
-# This policy is attached directly to the Cloud Run service.
-data "google_iam_policy" "frontend" {
-  binding {
-    role = "roles/run.invoker"
-    members = [
-      "allUsers",
-    ]
-  }
-}
-
-# This is the attachment of the previous IAM policy to the Cloud Run service.
-resource "google_cloud_run_service_iam_policy" "frontend" {
-  location = google_cloud_run_service.frontend.location
-  project = google_cloud_run_service.frontend.project
-  service = google_cloud_run_service.frontend.name
-  policy_data = data.google_iam_policy.frontend.policy_data
 }
 
 ###############################################################################
@@ -545,63 +383,63 @@ resource "google_cloud_run_service_iam_policy" "worker" {
 ###############################################################################
 # Module: monitoring
 ###############################################################################
-resource "google_monitoring_dashboard" "dashboard" {
-  dashboard_json = <<-EOF
-    {
-      "displayName": "Microservices",
-      "gridLayout": {
-        "columns": "1",
-        "widgets": [
-          {
-            "title": "Frontend Service - Response Latency - All Status Codes",
-            "xyChart": {
-              "dataSets": [
-                {
-                  "timeSeriesQuery": {
-                    "timeSeriesFilter": {
-                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
-                      "aggregation": {
-                        "alignmentPeriod": "60s",
-                        "perSeriesAligner": "ALIGN_PERCENTILE_50",
-                        "crossSeriesReducer": "REDUCE_MAX"
-                      }
-                    }
-                  },
-                  "legendTemplate": "P50"
-                },
-                {
-                  "timeSeriesQuery": {
-                    "timeSeriesFilter": {
-                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
-                      "aggregation": {
-                        "alignmentPeriod": "60s",
-                        "perSeriesAligner": "ALIGN_PERCENTILE_95",
-                        "crossSeriesReducer": "REDUCE_MAX"
-                      }
-                    }
-                  },
-                  "legendTemplate": "P95"
-                },
-                {
-                  "timeSeriesQuery": {
-                    "timeSeriesFilter": {
-                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
-                      "aggregation": {
-                        "alignmentPeriod": "60s",
-                        "perSeriesAligner": "ALIGN_PERCENTILE_99",
-                        "crossSeriesReducer": "REDUCE_MAX"
-                      }
-                    }
-                  },
-                  "legendTemplate": "P99"
-                }
-              ]
-            }
-          }
-        ]
-      }
-    }
-  EOF
+# resource "google_monitoring_dashboard" "dashboard" {
+#   dashboard_json = <<-EOF
+#     {
+#       "displayName": "Microservices",
+#       "gridLayout": {
+#         "columns": "1",
+#         "widgets": [
+#           {
+#             "title": "Frontend Service - Response Latency - All Status Codes",
+#             "xyChart": {
+#               "dataSets": [
+#                 {
+#                   "timeSeriesQuery": {
+#                     "timeSeriesFilter": {
+#                       "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+#                       "aggregation": {
+#                         "alignmentPeriod": "60s",
+#                         "perSeriesAligner": "ALIGN_PERCENTILE_50",
+#                         "crossSeriesReducer": "REDUCE_MAX"
+#                       }
+#                     }
+#                   },
+#                   "legendTemplate": "P50"
+#                 },
+#                 {
+#                   "timeSeriesQuery": {
+#                     "timeSeriesFilter": {
+#                       "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+#                       "aggregation": {
+#                         "alignmentPeriod": "60s",
+#                         "perSeriesAligner": "ALIGN_PERCENTILE_95",
+#                         "crossSeriesReducer": "REDUCE_MAX"
+#                       }
+#                     }
+#                   },
+#                   "legendTemplate": "P95"
+#                 },
+#                 {
+#                   "timeSeriesQuery": {
+#                     "timeSeriesFilter": {
+#                       "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+#                       "aggregation": {
+#                         "alignmentPeriod": "60s",
+#                         "perSeriesAligner": "ALIGN_PERCENTILE_99",
+#                         "crossSeriesReducer": "REDUCE_MAX"
+#                       }
+#                     }
+#                   },
+#                   "legendTemplate": "P99"
+#                 }
+#               ]
+#             }
+#           }
+#         ]
+#       }
+#     }
+#   EOF
 
-  depends_on = [module.project_services]
-}
+#   depends_on = [module.project_services]
+# }
