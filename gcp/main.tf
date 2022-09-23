@@ -8,9 +8,8 @@ terraform {
 }
 
 provider "google" {
-  project = var.project
-  region  = var.region
-  zone    = var.zone
+  project = var.gcp_project_id
+  region  = var.gcp_region
 }
 
 # This module will ensure that all the necessary GCP APIs are enabled. You'll
@@ -22,7 +21,7 @@ module "project_services" {
   source  = "terraform-google-modules/project-factory/google//modules/project_services"
   version = "~> 13.0"
 
-  project_id  = var.project
+  project_id  = var.gcp_project_id
   enable_apis = var.enable_apis
 
   activate_apis = [
@@ -52,7 +51,7 @@ resource "google_compute_network" "vpc" {
 resource "google_compute_subnetwork" "subnetwork" {
   name = "microservices"
   ip_cidr_range = "10.0.0.0/24"
-  region = var.region
+  region = var.gcp_region
   network = google_compute_network.vpc.id
 }
 
@@ -96,13 +95,13 @@ resource "google_sourcerepo_repository" "frontend" {
 # The Artifact Registry repo for the Frontend Service image.
 resource "google_artifact_registry_repository" "repo" {
   provider = google-beta
-  project = var.project
-  location = var.region
+  project = var.gcp_project_id
+  location = var.gcp_region
   repository_id = "microservices"
   format = "DOCKER"
 
   provisioner "local-exec" {
-    command = "./scripts/push-images-to-container-registry.sh ${var.region}"
+    command = "./scripts/push-images-to-container-registry.sh ${var.gcp_region}"
   }
 
   depends_on = [module.project_services]
@@ -118,21 +117,21 @@ resource "google_service_account" "gke" {
 
 # This IAM binding allows GKE nodes to download images from Artifact Registry.
 resource "google_project_iam_member" "gke_artifact_registry_viewer" {
-  project = var.project
+  project = var.gcp_project_id
   role = "roles/artifactregistry.reader"
   member = "serviceAccount:${google_service_account.gke.email}"
 }
 
 # This IAM binding allows GKE nodes to publish messages to Pub/Sub.
 resource "google_project_iam_member" "gke_pubsub_publisher" {
-  project = var.project
+  project = var.gcp_project_id
   role = "roles/pubsub.publisher"
   member = "serviceAccount:${google_service_account.gke.email}"
 }
 
 resource "google_container_cluster" "cluster" {
   name = "microservices"
-  location = var.region
+  location = var.gcp_region
   network = google_compute_network.vpc.self_link
   subnetwork = google_compute_subnetwork.subnetwork.self_link
 
@@ -171,7 +170,7 @@ resource "google_service_account" "cloudbuild" {
 # including the clouddeploy.released role (https://cloud.google.com/deploy/docs/integrating-ci#calling_from_your_ci_pipeline)
 # for creating a Cloud Deploy release after a successful build.
 resource "google_project_iam_member" "cloudbuild" {
-  project = var.project
+  project = var.gcp_project_id
   role = "roles/owner"
   member = "serviceAccount:${google_service_account.cloudbuild.email}"
 }
@@ -183,7 +182,7 @@ resource "google_service_account" "clouddeploy" {
 
 # To-Do: we probably want to narrow this down to just the required permissions.
 resource "google_project_iam_member" "clouddeploy" {
-  project = var.project
+  project = var.gcp_project_id
   role = "roles/owner"
   member = "serviceAccount:${google_service_account.clouddeploy.email}"
 }
@@ -198,8 +197,8 @@ resource "google_cloudbuild_trigger" "trigger" {
   }
 
   substitutions = {
-    _DEFAULT_REPO = "${var.region}-docker.pkg.dev/${var.project}/microservices"
-    _REGION = "${var.region}"
+    _DEFAULT_REPO = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices"
+    _REGION = "${var.gcp_region}"
   }
 
   filename = "cloudbuild.yaml"
@@ -208,7 +207,7 @@ resource "google_cloudbuild_trigger" "trigger" {
 }
 
 resource "google_clouddeploy_target" "staging" {
-  location = var.region
+  location = var.gcp_region
   name = "microservices-frontend-staging"
 
   gke {
@@ -224,7 +223,7 @@ resource "google_clouddeploy_target" "staging" {
 }
 
 resource "google_clouddeploy_target" "prod" {
-  location = var.region
+  location = var.gcp_region
   name = "microservices-frontend-prod"
 
   gke {
@@ -242,7 +241,7 @@ resource "google_clouddeploy_target" "prod" {
 }
 
 resource "google_clouddeploy_delivery_pipeline" "pipeline" {
-  location = var.region
+  location = var.gcp_region
   name = "microservices-frontend"
 
   serial_pipeline {
@@ -265,12 +264,12 @@ resource "google_clouddeploy_delivery_pipeline" "pipeline" {
 ###############################################################################
 resource "google_cloud_run_service" "font_color" {
   name     = "font-color"
-  location = var.region
+  location = var.gcp_region
 
   template {
     spec {
       containers {
-        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-font-color:latest"
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-font-color:latest"
         ports {
           container_port = 8080
         }
@@ -317,12 +316,12 @@ resource "google_cloud_run_service_iam_policy" "font_color_noauth" {
 ###############################################################################
 resource "google_cloud_run_service" "font_size" {
   name     = "font-size"
-  location = var.region
+  location = var.gcp_region
 
   template {
     spec {
       containers {
-        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-font-size:latest"
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-font-size:latest"
         ports {
           container_port = 8080
         }
@@ -354,12 +353,12 @@ resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
 ###############################################################################
 resource "google_cloud_run_service" "word" {
   name     = "word"
-  location = var.region
+  location = var.gcp_region
 
   template {
     spec {
       containers {
-        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-word:latest"
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-word:latest"
         ports {
           container_port = 80
         }
@@ -396,7 +395,7 @@ resource "google_service_account" "frontend_svc" {
 
 # This IAM policy allows the Frontend Service to publish messages into Pub/Sub.
 resource "google_project_iam_binding" "frontend_svc_account" {
-  project = var.project
+  project = var.gcp_project_id
   role = "roles/pubsub.publisher"
   members = [
       "serviceAccount:${google_service_account.frontend_svc.email}",
@@ -405,14 +404,14 @@ resource "google_project_iam_binding" "frontend_svc_account" {
 
 resource "google_cloud_run_service" "frontend" {
   name     = "frontend"
-  location = var.region
+  location = var.gcp_region
 
   template {
     spec {
       service_account_name = google_service_account.frontend_svc.email
 
       containers {
-        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-frontend:latest"
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-frontend:latest"
         ports {
           container_port = 8080
         }
@@ -479,12 +478,12 @@ resource "google_cloud_run_service_iam_policy" "frontend" {
 ###############################################################################
 resource "google_cloud_run_service" "worker" {
   name     = "worker"
-  location = var.region
+  location = var.gcp_region
 
   template {
     spec {
       containers {
-        image = "${var.region}-docker.pkg.dev/${var.project}/microservices/microservices-worker:latest"
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-worker:latest"
       }
     }
   }

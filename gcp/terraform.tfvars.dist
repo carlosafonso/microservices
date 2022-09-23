@@ -1,3 +1,2 @@
-project = "YOUR_PROJECT_ID"
-region = "YOUR_REGION"
-zone = "YOUR_ZONE"
+gcp_project_id = "YOUR_PROJECT_ID"
+gcp_region = "YOUR_REGION"

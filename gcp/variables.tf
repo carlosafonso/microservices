@@ -1,8 +1,12 @@
-variable "project" {}
+variable "gcp_project_id" {
+  type = string
+  description = "The ID of the GCP project where the template should be deployed."
+}
 
-variable "region" {}
-
-variable "zone" {}
+variable "gcp_region" {
+  type = string
+  description = "The GCP region where the template should be deployed."
+}
 
 variable "enable_apis" {
   type = bool
