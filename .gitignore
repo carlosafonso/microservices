@@ -10,7 +10,6 @@ __pycache__
 *.tfstate*
 *.tfvars
 .terraform/
-.terraform.lock.hcl
 backend.tf
 
 ecs/processed.yaml
