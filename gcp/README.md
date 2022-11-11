@@ -19,14 +19,15 @@ The following diagram shows the overall architecture of this demo:
 All commands must be run from the `gcp/` folder unless stated otherwise.
 
 1. Clone this repo into your Cloud Shell instance.
-2. Copy `terraform.tfvars.dist` into `terraform.tfvars`:
+2. Make sure that environment variable `GOOGLE_CLOUD_PROJECT` is defined.
+3. Copy `terraform.tfvars.dist` into `terraform.tfvars`:
 
     ```
     cp terraform.tfvars.dist terraform.tfvars
     ```
 
-3. Edit `terraform.tfvars` and set the apporpriate values.
-4. Deploy the Terraform template:
+4. Edit `terraform.tfvars` and set the apporpriate values.
+5. Deploy the Terraform template:
 
     ```
     terraform apply -auto-approve
