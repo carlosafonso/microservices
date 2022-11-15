@@ -119,18 +119,19 @@ resource "google_service_account" "gke" {
   display_name = "microservices - Service account for the GKE cluster nodes"
 }
 
-# This IAM binding allows GKE nodes to download images from Artifact Registry.
-resource "google_project_iam_member" "gke_artifact_registry_viewer" {
-  project = var.gcp_project_id
-  role = "roles/artifactregistry.reader"
-  member = "serviceAccount:${google_service_account.gke.email}"
-}
-
-# This IAM binding allows GKE nodes to publish messages to Pub/Sub.
-resource "google_project_iam_member" "gke_pubsub_publisher" {
-  project = var.gcp_project_id
-  role = "roles/pubsub.publisher"
-  member = "serviceAccount:${google_service_account.gke.email}"
+# These IAM bindings allow GKE nodes to download images from Artifact Registry
+# and publish messages to Pub/Sub.
+#
+# (In a real life scenario you'd want to use Workload Identity and grant
+# permissions to each pod rather than the node.)
+module "gke_nodes_svc_acct_iam_member_roles" {
+  source                  = "terraform-google-modules/iam/google//modules/member_iam"
+  service_account_address = google_service_account.gke.email
+  project_id              = var.gcp_project_id
+  project_roles = [
+    "roles/artifactregistry.reader",
+    "roles/pubsub.publisher",
+  ]
 }
 
 resource "google_container_cluster" "cluster" {
