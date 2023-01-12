@@ -2,11 +2,11 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 4.43.0"
+      version = "~> 4.48.0"
     }
     google-beta = {
       source = "hashicorp/google-beta"
-      version = "~> 4.43.0"
+      version = "~> 4.48.0"
     }
   }
 }
@@ -105,7 +105,7 @@ resource "google_artifact_registry_repository" "repo" {
   format = "DOCKER"
 
   provisioner "local-exec" {
-    command = "./scripts/push-images-to-container-registry.sh ${var.gcp_region}"
+    command = "./scripts/push-images-to-container-registry.sh ${var.gcp_project_id} ${var.gcp_region}"
   }
 
   depends_on = [module.project_services]
