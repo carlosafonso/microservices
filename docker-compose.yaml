@@ -22,10 +22,15 @@ services:
       - "9874:8080"
   word:
     build: ./src/word
+    volumes:
+     - ~/.config/gcloud/application_default_credentials.json:/gcp/creds.json
     ports:
       - "9873:80"
     environment:
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json
       - RANDOM_ERROR_PROBABILITY=${MICROSERVICES_WORD_SVC_RANDOM_ERROR_PROBABILITY:-0.5}
+      - USE_DATABASE=true
   worker:
     build: ./src/worker
     ports:
