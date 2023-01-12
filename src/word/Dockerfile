@@ -1,9 +1,11 @@
-FROM tiangolo/uwsgi-nginx-flask:python3.6-alpine3.8
+FROM python:3.11
 
-COPY requirements.txt /app
+WORKDIR /code
 
-WORKDIR /app
+COPY requirements.txt /code/requirements.txt
 
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-COPY . /app
+COPY ./app /code/app
+
+CMD ["gunicorn", "--conf", "app/gunicorn_conf.py", "--bind", "0.0.0.0:80", "app.main:app"]
