@@ -16,6 +16,15 @@ provider "google" {
   region  = var.gcp_region
 }
 
+# In GAE, these two GCP regions don't map directly to GAE's regions so a
+# special mapping must be considered.
+locals {
+  gcp_to_app_engine_regions = {
+    "europe-west1": "europe-west",
+    "us-central1": "us-central"
+  }
+}
+
 # This module will ensure that all the necessary GCP APIs are enabled. You'll
 # see quite a bit of "depends_on" attributes scattered throughout other
 # resources, as we need to wait until the services are enabled before
@@ -29,10 +38,12 @@ module "project_services" {
   enable_apis = var.enable_apis
 
   activate_apis = [
+    "appengine.googleapis.com",
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "clouddeploy.googleapis.com",
     "container.googleapis.com",
+    "firestore.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
@@ -356,12 +367,32 @@ resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
 ###############################################################################
 # Module: word service
 ###############################################################################
+resource "google_service_account" "word_svc" {
+  account_id = "word-svc"
+  display_name = "Word Service"
+}
+
+module "word_svc_acct_roles" {
+  source                  = "terraform-google-modules/iam/google//modules/member_iam"
+  service_account_address = resource.google_service_account.word_svc.email
+  project_id              = var.gcp_project_id
+  project_roles           = ["roles/datastore.user"]
+}
+
+resource "google_app_engine_application" "main" {
+  project = var.gcp_project_id
+  location_id = lookup(local.gcp_to_app_engine_regions, var.gcp_region, var.gcp_region)
+  database_type = "CLOUD_FIRESTORE"
+}
+
 resource "google_cloud_run_service" "word" {
   name     = "word"
   location = var.gcp_region
 
   template {
     spec {
+      service_account_name = google_service_account.word_svc.email
+
       containers {
         image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-word:latest"
         ports {
