@@ -1,16 +1,25 @@
 #!/bin/bash
 
-if [[ -z "$GOOGLE_CLOUD_PROJECT" ]]; then
-    echo "Environment variable \$GOOGLE_CLOUD_PROJECT is not defined. Please set it to the appropriate value."
+set -euo pipefail
+
+print_usage () {
+    cat << EOF
+
+Usage:
+
+    $0 [GCP_PROJECT_ID] [GCP_REGION]
+EOF
+}
+
+if [ $# -lt 2 ]; then
+    print_usage
     exit 1
 fi
 
-if [ $# -lt 1 ]; then
-    echo "Please specify the GCP region where the Artifact Registry repository is located (e.g., us-central1)"
-    exit 1
-fi
+GOOGLE_CLOUD_PROJECT=$1
+REGION=$2
 
-REGION=$1
+gcloud auth configure-docker $REGION-docker.pkg.dev
 
 for image_name in "frontend" "font-color" "font-size" "word" "worker"; do
     docker pull "carlosafonso/microservices-$image_name"
