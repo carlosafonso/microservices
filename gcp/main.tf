@@ -5,7 +5,7 @@ terraform {
       version = "~> 4.48.0"
     }
     google-beta = {
-      source = "hashicorp/google-beta"
+      source  = "hashicorp/google-beta"
       version = "~> 4.48.0"
     }
   }
@@ -20,8 +20,8 @@ provider "google" {
 # special mapping must be considered.
 locals {
   gcp_to_app_engine_regions = {
-    "europe-west1": "europe-west",
-    "us-central1": "us-central"
+    "europe-west1" : "europe-west",
+    "us-central1" : "us-central"
   }
 }
 
@@ -57,17 +57,17 @@ module "project_services" {
 # Module: network
 ###############################################################################
 resource "google_compute_network" "vpc" {
-  name = "microservices"
+  name                    = "microservices"
   auto_create_subnetworks = "false"
 
   depends_on = [module.project_services]
 }
 
 resource "google_compute_subnetwork" "subnetwork" {
-  name = "microservices"
+  name          = "microservices"
   ip_cidr_range = "10.0.0.0/24"
-  region = var.gcp_region
-  network = google_compute_network.vpc.id
+  region        = var.gcp_region
+  network       = google_compute_network.vpc.id
 }
 
 ###############################################################################
@@ -101,7 +101,7 @@ resource "google_sourcerepo_repository" "frontend" {
   provisioner "local-exec" {
     # Need to execute this from the repo root folder.
     working_dir = "../"
-    command = "./gcp/scripts/push-code-to-source-repository.sh ${self.url}"
+    command     = "./gcp/scripts/push-code-to-source-repository.sh ${self.url}"
   }
 
   depends_on = [module.project_services]
@@ -109,11 +109,11 @@ resource "google_sourcerepo_repository" "frontend" {
 
 # The Artifact Registry repo for the Frontend Service image.
 resource "google_artifact_registry_repository" "repo" {
-  provider = google-beta
-  project = var.gcp_project_id
-  location = var.gcp_region
+  provider      = google-beta
+  project       = var.gcp_project_id
+  location      = var.gcp_region
   repository_id = "microservices"
-  format = "DOCKER"
+  format        = "DOCKER"
 
   provisioner "local-exec" {
     command = "./scripts/push-images-to-container-registry.sh ${var.gcp_project_id} ${var.gcp_region}"
@@ -146,13 +146,13 @@ module "gke_nodes_svc_acct_iam_member_roles" {
 }
 
 resource "google_container_cluster" "cluster" {
-  name = "microservices"
-  location = var.gcp_region
-  network = google_compute_network.vpc.self_link
+  name       = "microservices"
+  location   = var.gcp_region
+  network    = google_compute_network.vpc.self_link
   subnetwork = google_compute_subnetwork.subnetwork.self_link
 
   remove_default_node_pool = true
-  initial_node_count = 1
+  initial_node_count       = 1
 
   networking_mode = "VPC_NATIVE"
   ip_allocation_policy {}
@@ -161,7 +161,7 @@ resource "google_container_cluster" "cluster" {
 }
 
 resource "google_container_node_pool" "nodepool" {
-  name = "microservices"
+  name    = "microservices"
   cluster = google_container_cluster.cluster.id
 
   node_config {
@@ -187,8 +187,8 @@ resource "google_service_account" "cloudbuild" {
 # for creating a Cloud Deploy release after a successful build.
 resource "google_project_iam_member" "cloudbuild" {
   project = var.gcp_project_id
-  role = "roles/owner"
-  member = "serviceAccount:${google_service_account.cloudbuild.email}"
+  role    = "roles/owner"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
 }
 
 resource "google_service_account" "clouddeploy" {
@@ -199,22 +199,22 @@ resource "google_service_account" "clouddeploy" {
 # To-Do: we probably want to narrow this down to just the required permissions.
 resource "google_project_iam_member" "clouddeploy" {
   project = var.gcp_project_id
-  role = "roles/owner"
-  member = "serviceAccount:${google_service_account.clouddeploy.email}"
+  role    = "roles/owner"
+  member  = "serviceAccount:${google_service_account.clouddeploy.email}"
 }
 
 resource "google_cloudbuild_trigger" "trigger" {
-  name = "microservices-frontend"
+  name            = "microservices-frontend"
   service_account = google_service_account.cloudbuild.id
 
   trigger_template {
-    repo_name = split("/repos/", google_sourcerepo_repository.frontend.id)[1]
+    repo_name   = split("/repos/", google_sourcerepo_repository.frontend.id)[1]
     branch_name = ".*"
   }
 
   substitutions = {
     _DEFAULT_REPO = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices"
-    _REGION = "${var.gcp_region}"
+    _REGION       = "${var.gcp_region}"
   }
 
   filename = "cloudbuild.yaml"
@@ -224,14 +224,14 @@ resource "google_cloudbuild_trigger" "trigger" {
 
 resource "google_clouddeploy_target" "staging" {
   location = var.gcp_region
-  name = "microservices-frontend-staging"
+  name     = "microservices-frontend-staging"
 
   gke {
     cluster = google_container_cluster.cluster.id
   }
 
   execution_configs {
-    usages = ["RENDER", "DEPLOY"]
+    usages          = ["RENDER", "DEPLOY"]
     service_account = google_service_account.clouddeploy.email
   }
 
@@ -240,14 +240,14 @@ resource "google_clouddeploy_target" "staging" {
 
 resource "google_clouddeploy_target" "prod" {
   location = var.gcp_region
-  name = "microservices-frontend-prod"
+  name     = "microservices-frontend-prod"
 
   gke {
     cluster = google_container_cluster.cluster.id
   }
 
   execution_configs {
-    usages = ["RENDER", "DEPLOY"]
+    usages          = ["RENDER", "DEPLOY"]
     service_account = google_service_account.clouddeploy.email
   }
 
@@ -258,17 +258,17 @@ resource "google_clouddeploy_target" "prod" {
 
 resource "google_clouddeploy_delivery_pipeline" "pipeline" {
   location = var.gcp_region
-  name = "microservices-frontend"
+  name     = "microservices-frontend"
 
   serial_pipeline {
     stages {
       target_id = "microservices-frontend-staging"
-      profiles = ["staging"]
+      profiles  = ["staging"]
     }
 
     stages {
       target_id = "microservices-frontend-prod"
-      profiles = ["prod"]
+      profiles  = ["prod"]
     }
   }
 
@@ -321,9 +321,9 @@ resource "google_cloud_run_service" "font_color" {
 }
 
 resource "google_cloud_run_service_iam_policy" "font_color_noauth" {
-  location = google_cloud_run_service.font_color.location
-  project = google_cloud_run_service.font_color.project
-  service = google_cloud_run_service.font_color.name
+  location    = google_cloud_run_service.font_color.location
+  project     = google_cloud_run_service.font_color.project
+  service     = google_cloud_run_service.font_color.name
   policy_data = data.google_iam_policy.allow_frontend_only.policy_data
 }
 
@@ -358,9 +358,9 @@ resource "google_cloud_run_service" "font_size" {
 }
 
 resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
-  location = google_cloud_run_service.font_size.location
-  project = google_cloud_run_service.font_size.project
-  service = google_cloud_run_service.font_size.name
+  location    = google_cloud_run_service.font_size.location
+  project     = google_cloud_run_service.font_size.project
+  service     = google_cloud_run_service.font_size.name
   policy_data = data.google_iam_policy.allow_frontend_only.policy_data
 }
 
@@ -368,7 +368,7 @@ resource "google_cloud_run_service_iam_policy" "font_size_noauth" {
 # Module: word service
 ###############################################################################
 resource "google_service_account" "word_svc" {
-  account_id = "word-svc"
+  account_id   = "word-svc"
   display_name = "Word Service"
 }
 
@@ -380,8 +380,8 @@ module "word_svc_acct_roles" {
 }
 
 resource "google_app_engine_application" "main" {
-  project = var.gcp_project_id
-  location_id = lookup(local.gcp_to_app_engine_regions, var.gcp_region, var.gcp_region)
+  project       = var.gcp_project_id
+  location_id   = lookup(local.gcp_to_app_engine_regions, var.gcp_region, var.gcp_region)
   database_type = "CLOUD_FIRESTORE"
 }
 
@@ -415,9 +415,9 @@ resource "google_cloud_run_service" "word" {
 }
 
 resource "google_cloud_run_service_iam_policy" "word_svc" {
-  location = google_cloud_run_service.word.location
-  project = google_cloud_run_service.word.project
-  service = google_cloud_run_service.word.name
+  location    = google_cloud_run_service.word.location
+  project     = google_cloud_run_service.word.project
+  service     = google_cloud_run_service.word.name
   policy_data = data.google_iam_policy.allow_frontend_only.policy_data
 }
 
@@ -425,16 +425,16 @@ resource "google_cloud_run_service_iam_policy" "word_svc" {
 # Module: frontend service
 ###############################################################################
 resource "google_service_account" "frontend_svc" {
-  account_id = "frontend-svc"
+  account_id   = "frontend-svc"
   display_name = "Frontend Service"
 }
 
 # This IAM policy allows the Frontend Service to publish messages into Pub/Sub.
 resource "google_project_iam_binding" "frontend_svc_account" {
   project = var.gcp_project_id
-  role = "roles/pubsub.publisher"
+  role    = "roles/pubsub.publisher"
   members = [
-      "serviceAccount:${google_service_account.frontend_svc.email}",
+    "serviceAccount:${google_service_account.frontend_svc.email}",
   ]
 }
 
@@ -452,23 +452,23 @@ resource "google_cloud_run_service" "frontend" {
           container_port = 8080
         }
         env {
-            name = "MICROSERVICES_ENV"
-            value = "prod"
+          name  = "MICROSERVICES_ENV"
+          value = "prod"
         }
         env {
-          name = "FONT_COLOR_SVC"
+          name  = "FONT_COLOR_SVC"
           value = google_cloud_run_service.font_color.status[0].url
         }
         env {
-          name = "FONT_SIZE_SVC"
+          name  = "FONT_SIZE_SVC"
           value = google_cloud_run_service.font_size.status[0].url
         }
         env {
-          name = "WORD_SVC"
+          name  = "WORD_SVC"
           value = google_cloud_run_service.word.status[0].url
         }
         env {
-          name = "PUBSUB_EVENTS_TOPIC"
+          name  = "PUBSUB_EVENTS_TOPIC"
           value = google_pubsub_topic.events.name
         }
       }
@@ -503,9 +503,9 @@ data "google_iam_policy" "frontend" {
 
 # This is the attachment of the previous IAM policy to the Cloud Run service.
 resource "google_cloud_run_service_iam_policy" "frontend" {
-  location = google_cloud_run_service.frontend.location
-  project = google_cloud_run_service.frontend.project
-  service = google_cloud_run_service.frontend.name
+  location    = google_cloud_run_service.frontend.location
+  project     = google_cloud_run_service.frontend.project
+  service     = google_cloud_run_service.frontend.name
   policy_data = data.google_iam_policy.frontend.policy_data
 }
 
@@ -537,12 +537,12 @@ resource "google_cloud_run_service" "worker" {
 }
 
 resource "google_service_account" "pubsub_events_worker_svc_subscription" {
-  account_id = "worker-svc-events"
+  account_id   = "worker-svc-events"
   display_name = "Worker Service Subscription to Events Pub/Sub Topic"
 }
 
 resource "google_pubsub_subscription" "worker_svc_events" {
-  name = "worker-svc-events"
+  name  = "worker-svc-events"
   topic = google_pubsub_topic.events.name
 
   # Setting this to the maximum value, as recommended by the Cloud Run docs
@@ -572,9 +572,9 @@ data "google_iam_policy" "worker" {
 
 # This is the attachment of the previous IAM policy to the Cloud Run service.
 resource "google_cloud_run_service_iam_policy" "worker" {
-  location = google_cloud_run_service.worker.location
-  project = google_cloud_run_service.worker.project
-  service = google_cloud_run_service.worker.name
+  location    = google_cloud_run_service.worker.location
+  project     = google_cloud_run_service.worker.project
+  service     = google_cloud_run_service.worker.name
   policy_data = data.google_iam_policy.worker.policy_data
 }
 
