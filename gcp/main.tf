@@ -380,6 +380,7 @@ module "word_svc_acct_roles" {
 }
 
 resource "google_app_engine_application" "main" {
+  count         = var.enable_app_engine ? 1 : 0
   project       = var.gcp_project_id
   location_id   = lookup(local.gcp_to_app_engine_regions, var.gcp_region, var.gcp_region)
   database_type = "CLOUD_FIRESTORE"

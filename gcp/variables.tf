@@ -13,3 +13,9 @@ variable "enable_apis" {
   default     = true
   description = "Whether to automatically enable the necessary Google Cloud APIs."
 }
+
+variable "enable_app_engine" {
+  type        = bool
+  default     = true
+  description = "Whether to automatically create and enable App Engine. If an App Engine application has already been defined, you should set this to `false`."
+}

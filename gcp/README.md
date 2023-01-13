@@ -35,6 +35,8 @@ All commands must be run from the `gcp/` folder unless stated otherwise.
 
     > **NOTE:** The Terraform module will automatically enable the necessary Google Cloud APIs.
 
+    > **NOTE:** If your project already has App Engine enabled, you might want to set `enable_app_engine` to `false` in your `terraformm.tfvars` file to avoid errors.
+
 ## Running the demo
 
 ### Autoscaling
