@@ -99,9 +99,7 @@ resource "google_sourcerepo_repository" "frontend" {
   name = "microservices-frontend"
 
   provisioner "local-exec" {
-    # Need to execute this from the repo root folder.
-    working_dir = "../"
-    command     = "./gcp/scripts/push-code-to-source-repository.sh ${self.url}"
+    command = "./scripts/push-code-to-source-repository.sh ${self.url}"
   }
 
   depends_on = [module.project_services]
