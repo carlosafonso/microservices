@@ -397,6 +397,10 @@ resource "google_cloud_run_service" "word" {
         ports {
           container_port = 80
         }
+        env {
+          name  = "USE_DATABASE"
+          value = "true"
+        }
       }
     }
   }
@@ -418,6 +422,20 @@ resource "google_cloud_run_service_iam_policy" "word_svc" {
   project     = google_cloud_run_service.word.project
   service     = google_cloud_run_service.word.name
   policy_data = data.google_iam_policy.allow_frontend_only.policy_data
+}
+
+resource "google_firestore_document" "word_data" {
+  collection  = "words"
+  document_id = "words"
+  fields = jsonencode(
+    {
+      "words" = {
+        "arrayValue" = {
+          "values" = [for word in var.initial_words : { "stringValue" = word }]
+        }
+      }
+    }
+  )
 }
 
 ###############################################################################

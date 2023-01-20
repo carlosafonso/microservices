@@ -19,3 +19,9 @@ variable "enable_app_engine" {
   default     = true
   description = "Whether to automatically create and enable App Engine. If an App Engine application has already been defined, you should set this to `false`."
 }
+
+variable "initial_words" {
+  type        = list(string)
+  default     = ["function", "overcharge", "consensus", "pest", "related", "locate", "earwax", "refund", "lead", "stage"]
+  description = "The initial set of words to store in the word service."
+}
