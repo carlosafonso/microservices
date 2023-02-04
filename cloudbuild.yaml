@@ -17,7 +17,8 @@ steps:
         'deploy', 'releases', 'create', 'r-${SHORT_SHA}-$$DATE$$TIME',
         '--delivery-pipeline', 'microservices-frontend',
         '--region', '$_REGION',
-        '--build-artifacts', '/workspace/artifacts.json'
+        '--build-artifacts', '/workspace/artifacts.json',
+        '--skaffold-version', '2.0'
       ]
 
 options:
