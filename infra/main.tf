@@ -16,6 +16,11 @@ provider "google" {
   region  = var.gcp_region
 }
 
+provider "google-beta" {
+  project = var.gcp_project_id
+  region  = var.gcp_region
+}
+
 # In GAE, these two GCP regions don't map directly to GAE's regions so a
 # special mapping must be considered.
 locals {
@@ -23,6 +28,7 @@ locals {
     "europe-west1" : "europe-west",
     "us-central1" : "us-central"
   }
+  frontend_run_svc_base_name = "frontend"
 }
 
 # This module will ensure that all the necessary GCP APIs are enabled. You'll
@@ -48,6 +54,7 @@ module "project_services" {
     "monitoring.googleapis.com",
     "pubsub.googleapis.com",
     "run.googleapis.com",
+    "secretmanager.googleapis.com",
     "sourcerepo.googleapis.com"
   ]
   disable_services_on_destroy = false
@@ -108,7 +115,6 @@ resource "google_sourcerepo_repository" "frontend" {
 # The Artifact Registry repo for the Frontend Service image.
 resource "google_artifact_registry_repository" "repo" {
   provider      = google-beta
-  project       = var.gcp_project_id
   location      = var.gcp_region
   repository_id = "microservices"
   format        = "DOCKER"
@@ -222,7 +228,7 @@ resource "google_cloudbuild_trigger" "trigger" {
 
 resource "google_clouddeploy_target" "staging" {
   location = var.gcp_region
-  name     = "microservices-frontend-staging"
+  name     = "msvc-fe-staging"
 
   gke {
     cluster = google_container_cluster.cluster.id
@@ -238,7 +244,7 @@ resource "google_clouddeploy_target" "staging" {
 
 resource "google_clouddeploy_target" "prod" {
   location = var.gcp_region
-  name     = "microservices-frontend-prod"
+  name     = "msvc-fe-prod"
 
   gke {
     cluster = google_container_cluster.cluster.id
@@ -256,17 +262,71 @@ resource "google_clouddeploy_target" "prod" {
 
 resource "google_clouddeploy_delivery_pipeline" "pipeline" {
   location = var.gcp_region
-  name     = "microservices-frontend"
+  name     = "msvc-fe"
 
   serial_pipeline {
     stages {
-      target_id = "microservices-frontend-staging"
+      target_id = "msvc-fe-staging"
       profiles  = ["staging"]
     }
 
     stages {
-      target_id = "microservices-frontend-prod"
+      target_id = "msvc-fe-prod"
       profiles  = ["prod"]
+    }
+  }
+
+  depends_on = [module.project_services]
+}
+
+
+resource "google_clouddeploy_target" "run_staging" {
+  provider = google-beta
+  location = var.gcp_region
+  name     = "msvc-fe-run-staging"
+
+  run {
+    location = "projects/${var.gcp_project_id}/locations/${var.gcp_region}"
+  }
+
+  execution_configs {
+    usages          = ["RENDER", "DEPLOY"]
+    service_account = google_service_account.clouddeploy.email
+  }
+
+  depends_on = [module.project_services]
+}
+
+resource "google_clouddeploy_target" "run_prod" {
+  provider = google-beta
+  location = var.gcp_region
+  name     = "msvc-fe-run-prod"
+
+  run {
+    location = "projects/${var.gcp_project_id}/locations/${var.gcp_region}"
+  }
+
+  execution_configs {
+    usages          = ["RENDER", "DEPLOY"]
+    service_account = google_service_account.clouddeploy.email
+  }
+
+  depends_on = [module.project_services]
+}
+
+resource "google_clouddeploy_delivery_pipeline" "pipeline_run" {
+  location = var.gcp_region
+  name     = "msvc-fe-run"
+
+  serial_pipeline {
+    stages {
+      target_id = "msvc-fe-run-staging"
+      profiles  = ["run-staging"]
+    }
+
+    stages {
+      target_id = "msvc-fe-run-prod"
+      profiles  = ["run-prod"]
     }
   }
 
@@ -446,61 +506,15 @@ resource "google_service_account" "frontend_svc" {
   display_name = "Frontend Service"
 }
 
-# This IAM policy allows the Frontend Service to publish messages into Pub/Sub.
-resource "google_project_iam_binding" "frontend_svc_account" {
-  project = var.gcp_project_id
-  role    = "roles/pubsub.publisher"
-  members = [
-    "serviceAccount:${google_service_account.frontend_svc.email}",
-  ]
-}
-
-resource "google_cloud_run_service" "frontend" {
-  name     = "frontend"
-  location = var.gcp_region
-
-  template {
-    spec {
-      service_account_name = google_service_account.frontend_svc.email
-
-      containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-frontend:latest"
-        ports {
-          container_port = 8080
-        }
-        env {
-          name  = "MICROSERVICES_ENV"
-          value = "prod"
-        }
-        env {
-          name  = "FONT_COLOR_SVC"
-          value = google_cloud_run_service.font_color.status[0].url
-        }
-        env {
-          name  = "FONT_SIZE_SVC"
-          value = google_cloud_run_service.font_size.status[0].url
-        }
-        env {
-          name  = "WORD_SVC"
-          value = google_cloud_run_service.word.status[0].url
-        }
-        env {
-          name  = "PUBSUB_EVENTS_TOPIC"
-          value = google_pubsub_topic.events.name
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  # See comment in google_cloud_run_service.font_color.
-  depends_on = [
-    google_artifact_registry_repository.repo,
-    module.project_services
+# These IAM policies allow the Frontend Service to publish messages into
+# Pub/Sub and retrieving secrets from Secret Manager.
+module "frontend_svc_acct_iam_member_roles" {
+  source                  = "terraform-google-modules/iam/google//modules/member_iam"
+  service_account_address = google_service_account.frontend_svc.email
+  project_id              = var.gcp_project_id
+  project_roles = [
+    "roles/pubsub.publisher",
+    "roles/secretmanager.secretAccessor",
   ]
 }
 
@@ -518,11 +532,77 @@ data "google_iam_policy" "frontend" {
   }
 }
 
-# This is the attachment of the previous IAM policy to the Cloud Run service.
-resource "google_cloud_run_service_iam_policy" "frontend" {
-  location    = google_cloud_run_service.frontend.location
-  project     = google_cloud_run_service.frontend.project
-  service     = google_cloud_run_service.frontend.name
+resource "google_cloud_run_service" "frontend_staging" {
+  name     = "${local.frontend_run_svc_base_name}-staging"
+  location = var.gcp_region
+
+  template {
+    spec {
+      service_account_name = google_service_account.frontend_svc.email
+
+      containers {
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-frontend:latest"
+        ports {
+          container_port = 8080
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+
+  # See comment in google_cloud_run_service.font_color.
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
+}
+
+resource "google_cloud_run_service" "frontend_prod" {
+  name     = "${local.frontend_run_svc_base_name}-prod"
+  location = var.gcp_region
+
+  template {
+    spec {
+      service_account_name = google_service_account.frontend_svc.email
+
+      containers {
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-frontend:latest"
+        ports {
+          container_port = 8080
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+
+  # See comment in google_cloud_run_service.font_color.
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    module.project_services
+  ]
+}
+
+# These are attachments of the previous IAM policy to the frontend Cloud Run
+# services.
+resource "google_cloud_run_service_iam_policy" "frontend_staging" {
+  location    = google_cloud_run_service.frontend_staging.location
+  project     = google_cloud_run_service.frontend_staging.project
+  service     = google_cloud_run_service.frontend_staging.name
+  policy_data = data.google_iam_policy.frontend.policy_data
+}
+
+resource "google_cloud_run_service_iam_policy" "frontend_prod" {
+  location    = google_cloud_run_service.frontend_prod.location
+  project     = google_cloud_run_service.frontend_prod.project
+  service     = google_cloud_run_service.frontend_prod.name
   policy_data = data.google_iam_policy.frontend.policy_data
 }
 
@@ -595,24 +675,88 @@ resource "google_cloud_run_service_iam_policy" "worker" {
   policy_data = data.google_iam_policy.worker.policy_data
 }
 
+resource "google_secret_manager_secret" "font_color_run_svc_url" {
+  secret_id = "font_color_run_svc_url"
+  replication {
+    user_managed {
+      replicas {
+        location = var.gcp_region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "font_color_run_svc_url" {
+  secret      = google_secret_manager_secret.font_color_run_svc_url.id
+  secret_data = google_cloud_run_service.font_color.status[0].url
+}
+
+resource "google_secret_manager_secret" "font_size_run_svc_url" {
+  secret_id = "font_size_run_svc_url"
+  replication {
+    user_managed {
+      replicas {
+        location = var.gcp_region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "font_size_run_svc_url" {
+  secret      = google_secret_manager_secret.font_size_run_svc_url.id
+  secret_data = google_cloud_run_service.font_size.status[0].url
+}
+
+resource "google_secret_manager_secret" "word_run_svc_url" {
+  secret_id = "word_run_svc_url"
+  replication {
+    user_managed {
+      replicas {
+        location = var.gcp_region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "word_run_svc_url" {
+  secret      = google_secret_manager_secret.word_run_svc_url.id
+  secret_data = google_cloud_run_service.word.status[0].url
+}
+
+resource "google_secret_manager_secret" "pubsub_events_topic_name" {
+  secret_id = "pubsub_events_topic_name"
+  replication {
+    user_managed {
+      replicas {
+        location = var.gcp_region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "pubsub_events_topic_name" {
+  secret      = google_secret_manager_secret.pubsub_events_topic_name.id
+  secret_data = google_pubsub_topic.events.name
+}
+
 ###############################################################################
 # Module: monitoring
 ###############################################################################
 resource "google_monitoring_dashboard" "dashboard" {
   dashboard_json = <<-EOF
     {
-      "displayName": "Microservices",
+      "displayName": "Microservices (Prod)",
       "gridLayout": {
         "columns": "1",
         "widgets": [
           {
-            "title": "Frontend Service - Response Latency - All Status Codes",
+            "title": "Frontend Service (Prod) - Response Latency - All Status Codes",
             "xyChart": {
               "dataSets": [
                 {
                   "timeSeriesQuery": {
                     "timeSeriesFilter": {
-                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend_prod.name}\"",
                       "aggregation": {
                         "alignmentPeriod": "60s",
                         "perSeriesAligner": "ALIGN_PERCENTILE_50",
@@ -625,7 +769,7 @@ resource "google_monitoring_dashboard" "dashboard" {
                 {
                   "timeSeriesQuery": {
                     "timeSeriesFilter": {
-                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend_prod.name}\"",
                       "aggregation": {
                         "alignmentPeriod": "60s",
                         "perSeriesAligner": "ALIGN_PERCENTILE_95",
@@ -638,7 +782,7 @@ resource "google_monitoring_dashboard" "dashboard" {
                 {
                   "timeSeriesQuery": {
                     "timeSeriesFilter": {
-                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend.name}\"",
+                      "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\" resource.label.\"service_name\"=\"${google_cloud_run_service.frontend_prod.name}\"",
                       "aggregation": {
                         "alignmentPeriod": "60s",
                         "perSeriesAligner": "ALIGN_PERCENTILE_99",

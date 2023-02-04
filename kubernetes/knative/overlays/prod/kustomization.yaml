@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+nameSuffix: -prod
+# We resort to a JSON patch as apparently strategic patch merges don't work
+# with Knative CRDs, probably because Knative is not aware of the Knative
+# schemas and how to merge them. (See: https://blog.argoproj.io/argo-crds-and-kustomize-the-problem-of-patching-lists-5cfc43da288c)
+patches:
+  - path: patch.yaml
+    target:
+      group: serving.knative.dev
+      version: v1
+      kind: Service
+      name: frontend
+resources:
+  - ../../base

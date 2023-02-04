@@ -1,0 +1,37 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  template:
+    spec:
+      # Replace this with the correct service account.
+      serviceAccountName: frontend-svc@microservices-374513.iam.gserviceaccount.com
+      containers:
+      - name: frontend
+        image: carlosafonso/microservices-frontend
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MICROSERVICES_ENV
+          value: dev
+        - name: FONT_COLOR_SVC
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: font_color_run_svc_url
+        - name: FONT_SIZE_SVC
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: font_size_run_svc_url
+        - name: WORD_SVC
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: word_run_svc_url
+        - name: PUBSUB_EVENTS_TOPIC
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: pubsub_events_topic_name

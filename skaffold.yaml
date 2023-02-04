@@ -20,21 +20,38 @@ build:
     context: src/word
     docker:
       dockerfile: Dockerfile
-manifests:
-  kustomize:
-    paths:
-    - kubernetes/base
 profiles:
+- name: dev
+  activation:
+    - command: dev
+  manifests:
+    kustomize:
+      paths:
+      - kubernetes/base
 - name: staging
   manifests:
     kustomize:
       paths:
       - kubernetes/overlays/staging
+- name: run-staging
+  manifests:
+    kustomize:
+      paths:
+      - kubernetes/knative/overlays/staging
+  deploy:
+    cloudrun: {}
 - name: prod
   manifests:
     kustomize:
       paths:
       - kubernetes/overlays/prod
+- name: run-prod
+  manifests:
+    kustomize:
+      paths:
+      - kubernetes/knative/overlays/prod
+  deploy:
+    cloudrun: {}
 portForward:
   - resourceType: service
     resourceName: frontend

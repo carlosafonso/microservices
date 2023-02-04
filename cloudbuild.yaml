@@ -15,7 +15,19 @@ steps:
     args:
       [
         'deploy', 'releases', 'create', 'r-${SHORT_SHA}-$$DATE$$TIME',
-        '--delivery-pipeline', 'microservices-frontend',
+        '--delivery-pipeline', 'msvc-fe',
+        '--region', '$_REGION',
+        '--build-artifacts', '/workspace/artifacts.json',
+        '--skaffold-version', '2.0'
+      ]
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Create Cloud Run release'
+    entrypoint: gcloud
+    args:
+      [
+        'deploy', 'releases', 'create', 'r-${SHORT_SHA}-$$DATE$$TIME',
+        '--delivery-pipeline', 'msvc-fe-run',
         '--region', '$_REGION',
         '--build-artifacts', '/workspace/artifacts.json',
         '--skaffold-version', '2.0'
