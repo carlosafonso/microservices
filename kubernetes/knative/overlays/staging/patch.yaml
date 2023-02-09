@@ -1,5 +1,28 @@
 - op: replace
-  path: /spec/template/spec/containers/0/env/0
+  path: /spec/template/spec/containers/0/env
   value:
-    name: MICROSERVICES_ENV
-    value: staging
+    - name: MICROSERVICES_ENV
+      value: staging
+    - name: FONT_COLOR_SVC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-staging-font_color_run_svc_url
+    - name: FONT_SIZE_SVC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-staging-font_size_run_svc_url
+    - name: WORD_SVC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-staging-word_run_svc_url
+    - name: PUBSUB_EVENTS_TOPIC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-staging-pubsub_events_topic_name
+- op: add
+  path: /spec/template/spec/serviceAccountName
+  value: msvc-staging-frontend-svc@microservices-374513.iam.gserviceaccount.com

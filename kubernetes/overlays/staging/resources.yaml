@@ -24,7 +24,7 @@ spec:
             - name: WORD_SVC
               value: word-staging:80
             - name: PUBSUB_EVENTS_TOPIC
-              value: events
+              value: msvc-staging-events
 ---
 apiVersion: v1
 kind: Service

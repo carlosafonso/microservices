@@ -24,7 +24,7 @@ spec:
             - name: WORD_SVC
               value: word-prod:80
             - name: PUBSUB_EVENTS_TOPIC
-              value: events
+              value: msvc-prod-events
 ---
 apiVersion: v1
 kind: Service

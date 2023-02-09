@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       # Replace this with the correct service account.
-      serviceAccountName: frontend-svc@microservices-374513.iam.gserviceaccount.com
+      # serviceAccountName: xxx@project-id.iam.gserviceaccount.com
       containers:
       - name: frontend
         image: carlosafonso/microservices-frontend
