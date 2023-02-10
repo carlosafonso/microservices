@@ -39,6 +39,15 @@ All commands must be run from the `infra/` folder unless stated otherwise.
 
     > **NOTE:** If your project already has App Engine enabled, you might want to set `enable_app_engine` to `false` in your `terraformm.tfvars` file to avoid errors.
 
+6. The Terraform template will use local provisioners to add your copy of the Git repository as a Git remote, and then hydrate some files with the appropriate values via a local provisioner. Commit whatever changes were produced and push them to Google Cloud Source Repositories.
+
+    ```
+    git add -f kubernetes/
+    git commit -m "Add hydrated manifests" && git push -u google master
+    ```
+
+This will also trigger the delivery pipelines and create the first release.
+
 ## Running the demo
 
 ### Autoscaling
