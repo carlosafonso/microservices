@@ -5,6 +5,11 @@ from google.cloud import firestore
 
 
 FIRESTORE_COLLECTION_NAME = 'words'
+if 'FIRESTORE_COLLECTION_NAME' not in os.environ:
+    print("'FIRESTORE_COLLECTION_NAME' not defined, defaulting to 'words'")
+else:
+    FIRESTORE_COLLECTION_NAME = os.environ['FIRESTORE_COLLECTION_NAME']
+    print("'FIRESTORE_COLLECTION_NAME' is '%s'" % FIRESTORE_COLLECTION_NAME)
 FIRESTORE_DOCUMENT_ID = 'words'
 USE_DATABASE = 'USE_DATABASE' in os.environ and not os.environ['USE_DATABASE'] == ''
 
