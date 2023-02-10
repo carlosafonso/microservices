@@ -9,7 +9,7 @@ steps:
       - '--default-repo=${_DEFAULT_REPO}'
       - '--file-output=/workspace/artifacts.json'
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:alpine'
     id: 'Create release'
     entrypoint: gcloud
     args:
@@ -21,7 +21,7 @@ steps:
         '--skaffold-version', '2.0'
       ]
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:alpine'
     id: 'Create Cloud Run release'
     entrypoint: gcloud
     args:
