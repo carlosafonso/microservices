@@ -20,6 +20,8 @@ steps:
         '--build-artifacts', '/workspace/artifacts.json',
         '--skaffold-version', '2.0'
       ]
+    waitFor:
+      - 'Build artifact'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:alpine'
     id: 'Create Cloud Run release'
@@ -32,6 +34,8 @@ steps:
         '--build-artifacts', '/workspace/artifacts.json',
         '--skaffold-version', '2.0'
       ]
+    waitFor:
+      - 'Build artifact'
 
 options:
   logging: CLOUD_LOGGING_ONLY
