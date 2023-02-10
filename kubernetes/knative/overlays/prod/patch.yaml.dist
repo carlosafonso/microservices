@@ -25,4 +25,5 @@
           name: msvc-prod-pubsub_events_topic_name
 - op: add
   path: /spec/template/spec/serviceAccountName
-  value: msvc-prod-frontend-svc@microservices-374513.iam.gserviceaccount.com
+  # This will be set by a local provisioner in Terraform
+  value: $FRONTEND_SERVICE_ACCOUNT_EMAIL

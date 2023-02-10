@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -euo pipefail
+
+print_usage () {
+    cat << EOF
+
+Usage:
+
+    $0 [ENVIRONMENT] [FRONTEND_SERVICE_ACCOUNT_EMAIL]
+EOF
+}
+
+if [ $# -lt 2 ]; then
+    print_usage
+    exit 1
+fi
+
+ENVIRONMENT=$1
+FRONTEND_SERVICE_ACCOUNT_EMAIL=$2
+
+envsubst < "../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml.dist" > "../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml"

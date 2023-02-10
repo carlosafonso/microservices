@@ -13,3 +13,7 @@ __pycache__
 backend.tf
 
 ecs/processed.yaml
+
+# Files that will be hydrated / populated via scripts
+kubernetes/knative/overlays/*/patch.yaml
+!kubernetes/knative/overlays/*/patch.yaml.dist

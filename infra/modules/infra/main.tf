@@ -559,3 +559,17 @@ resource "google_monitoring_dashboard" "dashboard" {
 
   depends_on = [module.project_services]
 }
+
+# We use this null resource to trigger a local provisioner that modifies and
+# hydrates manifests and other files which are external to Terraform.
+resource "null_resource" "environment" {
+  # Changes to the following resources will trigger this provisioner.
+  triggers = {
+    frontend_svc_acct_email = google_service_account.frontend_svc.email
+  }
+
+  provisioner "local-exec" {
+    # Replace placeholders in Kubernetes manifests.
+    command = "./scripts/replace-env-placeholders.sh ${var.env} ${google_service_account.frontend_svc.email}"
+  }
+}
