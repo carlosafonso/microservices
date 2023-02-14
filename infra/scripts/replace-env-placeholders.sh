@@ -16,7 +16,7 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
-ENVIRONMENT=$1
-FRONTEND_SERVICE_ACCOUNT_EMAIL=$2
+export ENVIRONMENT=$1
+export FRONTEND_SERVICE_ACCOUNT_EMAIL=$2
 
 envsubst < "../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml.dist" > "../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml"
