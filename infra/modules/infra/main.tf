@@ -6,6 +6,10 @@ locals {
   }
 }
 
+# We'll use this if we need to access the project's number.
+data "google_project" "project" {
+}
+
 # This module will ensure that all the necessary GCP APIs are enabled. You'll
 # see quite a bit of "depends_on" attributes scattered throughout other
 # resources, as we need to wait until the services are enabled before
@@ -554,6 +558,56 @@ resource "google_monitoring_dashboard" "dashboard" {
   EOF
 
   depends_on = [module.project_services]
+}
+
+###############################################################################
+# Module: analytics
+###############################################################################
+# Allow Pub/Sub to push data to BigQuery. Permissions must be assigned to the
+# Pub/Sub service account.
+#
+# (See: https://cloud.google.com/pubsub/docs/create-subscription#assign_bigquery_service_account)
+module "pubsub_svc_acct_pubsub_2_bq_iam_member_roles" {
+  source                  = "terraform-google-modules/iam/google//modules/member_iam"
+  service_account_address = "service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+  project_id              = var.gcp_project_id
+  project_roles = [
+    "roles/bigquery.metadataViewer",
+    "roles/bigquery.dataEditor",
+  ]
+}
+
+resource "google_bigquery_dataset" "main" {
+  dataset_id = replace(local.base_name, "-", "_") # Can't have hyphens, apparently.
+}
+
+resource "google_bigquery_table" "events" {
+  deletion_protection = false
+  table_id            = "events"
+  dataset_id          = google_bigquery_dataset.main.dataset_id
+
+  schema = <<EOF
+[
+  {
+    "name": "data",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The data"
+  }
+]
+EOF
+}
+
+resource "google_pubsub_subscription" "events_to_bigquery" {
+  name  = "${local.base_name}-events-2-bq"
+  topic = google_pubsub_topic.events.name
+
+  bigquery_config {
+    table = "${google_bigquery_table.events.project}:${google_bigquery_table.events.dataset_id}.${google_bigquery_table.events.table_id}"
+  }
+
+  # Make sure that the appropriate IAM permissions are set.
+  depends_on = [module.pubsub_svc_acct_pubsub_2_bq_iam_member_roles]
 }
 
 # We use this null resource to trigger a local provisioner that modifies and
