@@ -351,7 +351,7 @@ resource "google_cloud_run_service" "frontend" {
   lifecycle {
     # Modifications to this service should occur via Cloud Deploy, so Terraform
     # must ignore the drift after creation.
-    ignore_changes = all
+    ignore_changes        = all
     create_before_destroy = false
   }
 }
