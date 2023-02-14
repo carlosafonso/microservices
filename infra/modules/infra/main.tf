@@ -345,13 +345,9 @@ resource "google_cloud_run_service" "frontend" {
   ]
 
   lifecycle {
-    ignore_changes = [
-      metadata.0.annotations,
-      template.0.spec.0.containers.0.image,
-      template.0.spec.0.containers.0.args,
-      template.0.spec.0.containers.0.command,
-      template.0.spec.0.containers.0.env,
-    ]
+    # Modifications to this service should occur via Cloud Deploy, so Terraform
+    # must ignore the drift after creation.
+    ignore_changes = all
     create_before_destroy = false
   }
 }
