@@ -31,6 +31,7 @@ module "project_services" {
     "pubsub.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
+    #"sqladmin.googleapis.com",
   ]
   disable_services_on_destroy = false
 }
@@ -134,6 +135,16 @@ resource "google_container_node_pool" "nodepool" {
 ###############################################################################
 # Module: font-color service
 ###############################################################################
+# resource "google_sql_database_instance" "font_color" {
+#   name             = "${local.base_name}-font-color"
+#   database_version = "POSTGRES_14"
+
+#   deletion_protection = false
+#   settings {
+#     tier = "db-f1-micro"
+#   }
+# }
+
 resource "google_cloud_run_service" "font_color" {
   name     = "${local.base_name}-font-color"
   location = var.gcp_region

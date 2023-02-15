@@ -17,6 +17,9 @@ spec:
         image: carlosafonso/microservices-font-color
         ports:
         - containerPort: 8080
+        env:
+          - name: DB_CONNECTION_STRING
+            value: foo
         resources:
           requests:
             cpu: 125m

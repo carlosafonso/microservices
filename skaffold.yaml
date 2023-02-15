@@ -25,9 +25,9 @@ profiles:
   activation:
     - command: dev
   manifests:
-    kustomize:
-      paths:
-      - kubernetes/base
+    rawYaml:
+      - kubernetes/base/font-color.yaml
+      - kubernetes/base/font-size.yaml
 - name: staging
   manifests:
     kustomize:
