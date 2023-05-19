@@ -2,11 +2,11 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 4.61.0"
+      version = "~> 4.65.2"
     }
     google-beta = {
       source  = "hashicorp/google-beta"
-      version = "~> 4.61.0"
+      version = "~> 4.65.2"
     }
   }
 }
@@ -149,6 +149,7 @@ resource "google_clouddeploy_target" "frontend_gke_prod" {
 }
 
 resource "google_clouddeploy_delivery_pipeline" "frontend_gke" {
+  provider = google-beta
   location = var.gcp_region
   name     = "msvc-fe-gke"
 
@@ -161,6 +162,23 @@ resource "google_clouddeploy_delivery_pipeline" "frontend_gke" {
     stages {
       target_id = "msvc-fe-gke-prod"
       profiles  = ["prod"]
+
+      strategy {
+        canary {
+          canary_deployment {
+            percentages = [10, 50]
+          }
+
+          runtime_config {
+            kubernetes {
+              service_networking {
+                deployment = "frontend-prod"
+                service = "frontend-prod"
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -202,6 +220,7 @@ resource "google_clouddeploy_target" "frontend_run_prod" {
 }
 
 resource "google_clouddeploy_delivery_pipeline" "frontend_run" {
+  provider = google-beta
   location = var.gcp_region
   name     = "msvc-fe-run"
 
@@ -214,6 +233,20 @@ resource "google_clouddeploy_delivery_pipeline" "frontend_run" {
     stages {
       target_id = "msvc-fe-run-prod"
       profiles  = ["run-prod"]
+
+      strategy {
+        canary {
+          canary_deployment {
+            percentages = [10, 50]
+          }
+
+          runtime_config {
+            cloud_run {
+              automatic_traffic_control = true
+            }
+          }
+        }
+      }
     }
   }
 

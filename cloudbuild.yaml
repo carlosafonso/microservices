@@ -18,7 +18,10 @@ steps:
         '--delivery-pipeline', 'msvc-fe-gke',
         '--region', '$_REGION',
         '--build-artifacts', '/workspace/artifacts.json',
-        '--skaffold-version', '2.0'
+        # As of 2023-05-19, Cloud Deploy must use the Skaffold preview version
+        # as the latest supported LTS (2.3.x) does not work with canary
+        # deployment strategies.
+        '--skaffold-version', 'skaffold_preview'
       ]
     waitFor:
       - 'Build artifact'
@@ -32,7 +35,10 @@ steps:
         '--delivery-pipeline', 'msvc-fe-run',
         '--region', '$_REGION',
         '--build-artifacts', '/workspace/artifacts.json',
-        '--skaffold-version', '2.0'
+        # As of 2023-05-19, Cloud Deploy must use the Skaffold preview version
+        # as the latest supported LTS (2.3.x) does not work with canary
+        # deployment strategies.
+        '--skaffold-version', 'skaffold_preview'
       ]
     waitFor:
       - 'Build artifact'
