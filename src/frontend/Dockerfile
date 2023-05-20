@@ -4,10 +4,12 @@ COPY composer.json composer.lock /app/
 
 RUN composer install
 
-FROM public.ecr.aws/m0i9w4q3/alpine-nginx-php7:2.0.1
+FROM php:8.1-alpine
 
 COPY --from=composer /app/vendor/ /var/www/html/vendor/
 
 COPY src/ /var/www/html/src/
 COPY templates/ /var/www/html/templates/
 COPY index.php /var/www/html
+
+ENTRYPOINT ["php", "-S", "0.0.0.0:8080", "-t", "/var/www/html"]
