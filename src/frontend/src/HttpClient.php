@@ -9,6 +9,11 @@ use GuzzleHttp\HandlerStack;
 class HttpClient
 {
     /**
+     * @param $timeout The max request timeout in seconds.
+     */
+    public function __construct(protected int $timeout) {}
+
+    /**
      * Make an HTTP GET request to the given URL, signing the request in the
      * process if the URL happens to be a Cloud Run service.
      */
@@ -30,10 +35,11 @@ class HttpClient
             $client = new Client([
                 'handler' => $stack,
                 'auth' => 'google_auth',
+                'timeout' => $this->timeout,
             ]);
         } else {
             // URL is NOT a Cloud Run service. Use a generic HTTP client.
-            $client = new Client();
+            $client = new Client(['timeout' => $this->timeout]);
         }
 
         return $client->get($url)->getBody();

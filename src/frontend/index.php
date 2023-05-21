@@ -39,15 +39,33 @@ $log->info(
 $pubSubEventsTopic = getenv('PUBSUB_EVENTS_TOPIC');
 $emitToPubSub = $pubSubEventsTopic !== false && !empty($pubSubEventsTopic);
 
-$httpClient = new HttpClient();
+$httpClient = new HttpClient(timeout: 1);
 
-$wordResponse = $httpClient->get($wordSvcEndpoint);
-$colorResponse = $httpClient->get($fontColorSvcEndpoint);
-$sizeResponse = $httpClient->get($fontSizeSvcEndpoint);
+$word = $color = $size = null;
 
-$word = json_decode($wordResponse);
-$color = json_decode($colorResponse);
-$size = json_decode($sizeResponse);
+try {
+    $wordResponse = $httpClient->get($wordSvcEndpoint);
+    $word = json_decode($wordResponse)->word;
+} catch (\Exception $e) {
+    $log->critical('Failed to get word', ['exception' => $e]);
+    $word = '(ERROR)';
+}
+
+try {
+    $colorResponse = $httpClient->get($fontColorSvcEndpoint);
+    $color = json_decode($colorResponse)->color;
+} catch (\Exception $e) {
+    $log->critical('Failed to get font color', ['exception' => $e]);
+    $color = 'red';
+}
+
+try {
+    $sizeResponse = $httpClient->get($fontSizeSvcEndpoint);
+    $size = json_decode($sizeResponse)->size;
+} catch (\Exception $e) {
+    $log->critical('Failed to get font size', ['exception' => $e]);
+    $size = 50;
+}
 
 $log->info("Invoked all services", ['font-color' => $color, 'font-size' => $size, 'word' => $word]);
 
@@ -57,9 +75,9 @@ if ($emitToPubSub) {
 
     // Publish an event into the Pub/Sub events topic.
     $eventPayload = [
-        'word' => $word->word,
-        'color' => $color->color,
-        'size' => $size->size,
+        'word' => $word,
+        'color' => $color,
+        'size' => $size,
     ];
     $topic->publish(['data' => json_encode($eventPayload)]);
 

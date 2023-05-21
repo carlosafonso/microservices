@@ -41,14 +41,14 @@
 
         span.word {
             line-height: 200px;
-            color: <?php echo($color->color); ?>;
-            font-size: <?php echo($size->size); ?>px;
+            color: <?php echo($color); ?>;
+            font-size: <?php echo($size); ?>px;
         }
     </style>
 </head>
 <body>
     <span class="env <?php echo($env); ?>">You are currently viewing the <strong><?php echo($env); ?></strong> environment.</span>
-    <span class="word"><?php echo($word->word); ?></span>
+    <span class="word"><?php echo($word); ?></span>
     <?php if (!empty($podName) && !empty($podIp)): ?>
         <span>This request has been served from pod <strong><?php echo($podName); ?></strong> with IP <strong><?php echo($podIp); ?></strong>.</span>
     <?php endif; ?>
