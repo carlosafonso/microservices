@@ -31,6 +31,7 @@ services:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
       - GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json
       - RANDOM_ERROR_PROBABILITY=${MICROSERVICES_WORD_SVC_RANDOM_ERROR_PROBABILITY:-0.0}
+      - FIRESTORE_COLLECTION_NAME=msvc-staging-words
       - USE_DATABASE=true
   worker:
     build: ./src/worker
