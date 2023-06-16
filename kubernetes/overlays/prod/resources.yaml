@@ -1,4 +1,19 @@
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: word
+spec:
+  template:
+    spec:
+      containers:
+      - name: word
+        env:
+          - name: USE_DATABASE
+            value: "true"
+          - name: FIRESTORE_COLLECTION_NAME
+            value: msvc-prod-words
+---
 kind: Deployment
 apiVersion: apps/v1
 metadata:

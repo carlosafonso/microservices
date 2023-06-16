@@ -10,8 +10,16 @@ if 'FIRESTORE_COLLECTION_NAME' not in os.environ:
 else:
     FIRESTORE_COLLECTION_NAME = os.environ['FIRESTORE_COLLECTION_NAME']
     print("'FIRESTORE_COLLECTION_NAME' is '%s'" % FIRESTORE_COLLECTION_NAME)
+
+
 FIRESTORE_DOCUMENT_ID = 'words'
+
+
 USE_DATABASE = 'USE_DATABASE' in os.environ and not os.environ['USE_DATABASE'] == ''
+if USE_DATABASE:
+    print("Will use Firestore collection '%s' as word backend" % FIRESTORE_COLLECTION_NAME)
+else:
+    print("Will not use Firestore, using harcoded word set instead")
 
 
 app = Flask(__name__)

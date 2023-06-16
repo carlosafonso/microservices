@@ -96,6 +96,8 @@ module "gke_nodes_svc_acct_iam_member_roles" {
   project_roles = [
     "roles/artifactregistry.reader",
     "roles/pubsub.publisher",
+    # Needed by the word service to read from Cloud Firestore (if configured).
+    "roles/datastore.user",
   ]
 }
 
