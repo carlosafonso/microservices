@@ -4,11 +4,18 @@
         "google/auth": "^1.21",
         "google/cloud-pubsub": "^1.38",
         "league/plates": "^3.4",
-        "monolog/monolog": "^2.7"
+        "monolog/monolog": "^2.7",
+        "slim/slim": "^4.11",
+        "slim/psr7": "^1.6"
     },
     "autoload": {
         "psr-4": {
             "Afonso\\Gcp\\Demos\\Microservices\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
         }
     }
 }
