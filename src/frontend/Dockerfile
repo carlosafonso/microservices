@@ -4,7 +4,7 @@ COPY composer.json composer.lock /app/
 
 RUN composer install
 
-FROM php:8.1-alpine
+FROM php:8.2-alpine
 
 COPY --from=composer /app/vendor/ /var/www/html/vendor/
 
