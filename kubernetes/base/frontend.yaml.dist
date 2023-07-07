@@ -1,0 +1,157 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend
+data:
+  # This is the OpenTelemetry collector configuration data.
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      googlecloud:
+        # To-Do: this should be retrievable via env var
+        project: $GCP_PROJECT_ID
+        log:
+          default_log_name: opentelemetry.io/collector-exported-log
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 65
+        spike_limit_percentage: 20
+      batch:
+      resourcedetection:
+        detectors: [gcp]
+        timeout: 10s
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [googlecloud]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [googlecloud]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [googlecloud]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+      env: dev
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: frontend
+        env: dev
+    spec:
+      containers:
+      - name: frontend
+        image: carlosafonso/microservices-frontend
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 125m
+            memory: 256Mi
+        env:
+          - name: MICROSERVICES_ENV
+            value: dev
+          - name: FONT_COLOR_SVC
+            value: font-color:80
+          - name: FONT_SIZE_SVC
+            value: font-size:80
+          - name: WORD_SVC
+            value: word:80
+          - name: MSVC_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MSVC_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          # Automatically autoload the OpenTelemetry SDK.
+          - name: OTEL_PHP_AUTOLOAD_ENABLED
+            value: "true"
+          # Export traces using the OTLP protocol.
+          - name: OTEL_TRACES_EXPORTER
+            #value: console
+            value: otlp
+          # Don't export metrics.
+          - name: OTEL_METRICS_EXPORTER
+            value: none
+          # Don't export logs.
+          - name: OTEL_LOGS_EXPORTER
+            value: none
+          # Specify the name of the service.
+          - name: OTEL_SERVICE_NAME
+            value: frontend
+          # Use JSON as the OTLP message format.
+          - name: OTEL_EXPORTER_OTLP_PROTOCOL
+            value: "http/json"
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://localhost:4318
+          - name: OTEL_PROPAGATORS
+            value: baggage,tracecontext
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib
+        args:
+          - "--config=/config/otel-collector-config.yaml"
+        volumeMounts:
+          - name: otel-collector-config
+            mountPath: "/config"
+            readOnly: true
+        ports:
+          - containerPort: 1888
+          - containerPort: 8888
+          - containerPort: 8889
+          - containerPort: 13133
+          - containerPort: 4317
+          - containerPort: 4318
+          - containerPort: 55679
+      volumes:
+        - name: otel-collector-config
+          configMap:
+            name: frontend
+            items:
+              - key: "otel-collector-config.yaml"
+                path: "otel-collector-config.yaml"
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+    env: dev
+  type: LoadBalancer
+  ports:
+   -  protocol: TCP
+      port: 80
+      targetPort: 8080

@@ -103,6 +103,9 @@ module "gke_nodes_svc_acct_iam_member_roles" {
     "roles/stackdriver.resourceMetadata.writer",
     # Needed by the word service to read from Cloud Firestore (if configured).
     "roles/datastore.user",
+    # Needed by the OpenTelemetry collectors / agents to send data to Cloud
+    # Trace.
+    "roles/cloudtrace.agent",
   ]
 }
 
@@ -294,15 +297,18 @@ resource "google_service_account" "frontend_svc" {
   display_name = "Frontend Service"
 }
 
-# These IAM policies allow the Frontend Service to publish messages into
-# Pub/Sub and retrieving secrets from Secret Manager.
 module "frontend_svc_acct_iam_member_roles" {
   source                  = "terraform-google-modules/iam/google//modules/member_iam"
   service_account_address = google_service_account.frontend_svc.email
   project_id              = var.gcp_project_id
   project_roles = [
+    # Needed by the service to publish messages into Pub/Sub.
     "roles/pubsub.publisher",
+    # Needed so that Cloud Run can fetch secrets from Secret Manager.
     "roles/secretmanager.secretAccessor",
+    # Needed by the OpenTelemetry collectors / agents to send data to Cloud
+    # Trace.
+    "roles/cloudtrace.agent",
   ]
 }
 

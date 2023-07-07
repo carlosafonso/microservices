@@ -5,6 +5,7 @@ namespace Afonso\Gcp\Demos\Microservices;
 use Google\Auth\ApplicationDefaultCredentials;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Request;
 
 class HttpClient
 {
@@ -42,6 +43,8 @@ class HttpClient
             $client = new Client(['timeout' => $this->timeout]);
         }
 
-        return $client->get($url)->getBody();
+        // `$client->get()` does not trigger the automatic PSR-18 OpenTelemetry
+        // instrumentation, hence the need to create a new Request().
+        return $client->sendRequest(new Request('GET', $url))->getBody();
     }
 }

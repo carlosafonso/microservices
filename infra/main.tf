@@ -44,6 +44,19 @@ module "project_services" {
   disable_services_on_destroy = false
 }
 
+# We use this null resource to trigger a local provisioner that modifies and
+# hydrates manifests and other files which are external to Terraform.
+#
+# This hydrates generic values which are not environment-dependent.
+# Environment-specific hydration should take place in the environment module
+# (./modules/infra).
+resource "null_resource" "generic_hydration" {
+  provisioner "local-exec" {
+    # Replace placeholders in Kubernetes manifests.
+    command = "./scripts/hydrate-generic-placeholders.sh ${var.gcp_project_id}"
+  }
+}
+
 # The Cloud Source Repository for the Frontend Service code.
 resource "google_sourcerepo_repository" "frontend" {
   name = "microservices-frontend"
