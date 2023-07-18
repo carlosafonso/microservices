@@ -53,3 +53,4 @@ This will also trigger the delivery pipelines and create the first release.
 Refer to the following docs to understand how to run the demos:
 
 * [Autoscaling](docs/demo-autoscaling.md)
+* [Tracing](docs/demo-tracing.md)
