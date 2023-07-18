@@ -633,6 +633,6 @@ resource "null_resource" "environment" {
 
   provisioner "local-exec" {
     # Replace placeholders in Kubernetes manifests.
-    command = "./scripts/replace-env-placeholders.sh ${var.env} ${google_service_account.frontend_svc.email}"
+    command = "./scripts/hydrate-env-placeholders.sh ${var.env} ${google_service_account.frontend_svc.email}"
   }
 }

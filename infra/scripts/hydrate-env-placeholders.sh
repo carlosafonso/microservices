@@ -19,4 +19,7 @@ fi
 export ENVIRONMENT=$1
 export FRONTEND_SERVICE_ACCOUNT_EMAIL=$2
 
-envsubst < "../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml.dist" > "../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml"
+# Switch to the directory where this script is located.
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+envsubst < "../../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml.dist" > "../../kubernetes/knative/overlays/$ENVIRONMENT/patch.yaml"
