@@ -48,6 +48,17 @@ All commands must be run from the `infra/` folder unless stated otherwise.
 
 This will also trigger the delivery pipelines and create the first release.
 
+### Deployment parameters
+
+The Terraform template exposes several variables with default values that you can tweak. You can view them all in [`variables.tf`](infra/variables.tf), but in a nutshell these are:
+
+* `gcp_project_id`: (**REQUIRED**) The ID of the GCP project where the template should be deployed.
+* `gcp_region`: (**REQUIRED**) The GCP region where the template should be deployed.
+* `enable_apis`: Whether to automatically enable the necessary Google Cloud APIs.
+* `enable_app_engine`: Whether to automatically create and enable App Engine. If an App Engine application has already been defined, you should set this to `false`.
+* `initial_words`: The initial set of words to store in the word service.
+* `enable_load_generator`: Whether to deploy synthetic load against the production environment. If enabled, this can incur additional cost.
+
 ## Running the demos
 
 Refer to the following docs to understand how to run the demos:
