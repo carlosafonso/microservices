@@ -31,6 +31,7 @@ module "project_services" {
     "pubsub.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
+    "cloudscheduler.googleapis.com",
   ]
   disable_services_on_destroy = false
 }
@@ -634,5 +635,75 @@ resource "null_resource" "environment" {
   provisioner "local-exec" {
     # Replace placeholders in Kubernetes manifests.
     command = "./scripts/hydrate-env-placeholders.sh ${var.env} ${google_service_account.frontend_svc.email}"
+  }
+}
+
+###############################################################################
+# Module: load generator
+###############################################################################
+# This is the Cloud Run job that will run the Locust load testing tool.
+resource "google_cloud_run_v2_job" "load_generator" {
+  name     = "${local.base_name}-load-generator"
+  location = var.gcp_region
+
+  template {
+    task_count = 1
+
+    template {
+      max_retries = 0
+      timeout = "3600s" # 1 hour.
+      containers {
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-load-generator:latest"
+        command = [ "locust", "--headless", "--only-summary", "-H", google_cloud_run_service.frontend.status[0].url ]
+
+        resources {
+          # The default config of 1 CPU / 512 MB causes the job to run out of
+          # memory for some reason.
+          limits = {
+            "cpu" = "1",
+            "memory" = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+
+# The service account and IAM role configuration for Cloud Scheduler to execute
+# the load generator job.
+resource "google_service_account" "load_generator_cloud_scheduler" {
+  account_id   = "${local.base_name}-load-generator-cs"
+  display_name = "${local.base_name} - Load generator Cloud Scheduler job"
+}
+
+module "cloudscheduler_svc_acct_iam_member_roles" {
+  source                  = "terraform-google-modules/iam/google//modules/member_iam"
+  service_account_address = google_service_account.load_generator_cloud_scheduler.email
+  project_id              = var.gcp_project_id
+  project_roles = [
+    "roles/run.invoker",
+  ]
+}
+
+# The Cloud Scheduler trigger that will execute the load generator on a regular
+# cadence.
+resource "google_cloud_scheduler_job" "load_generator" {
+  name             = "${local.base_name}-load-generator"
+  description      = "${local.base_name} - Load generator"
+  schedule         = "*/30 * * * *"
+  time_zone        = "UTC"
+  attempt_deadline = "30s"
+  paused = var.enable_load_generator ? false : true # Only enable the job if specified as a parameter.
+
+  retry_config {
+    retry_count = 0
+  }
+
+  http_target {
+    http_method = "POST"
+    uri         = "https://run.googleapis.com/v2/${google_cloud_run_v2_job.load_generator.id}:run"
+    oauth_token {
+      service_account_email = google_service_account.load_generator_cloud_scheduler.email
+    }
   }
 }

@@ -27,3 +27,8 @@ variable "initial_words" {
   type        = list(string)
   description = "The initial set of words to store in the word service."
 }
+
+variable "enable_load_generator" {
+  type        = bool
+  description = "Whether synthetic load should be generated for this environment (currently only for the Frontend Service running on Cloud Run)."
+}

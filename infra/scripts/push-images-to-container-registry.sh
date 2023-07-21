@@ -21,7 +21,7 @@ REGION=$2
 
 gcloud auth configure-docker $REGION-docker.pkg.dev
 
-for image_name in "frontend" "font-color" "font-size" "word" "worker"; do
+for image_name in "frontend" "font-color" "font-size" "word" "worker" "load-generator"; do
     docker pull "carlosafonso/microservices-$image_name"
     docker tag "carlosafonso/microservices-$image_name:latest" "$REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/microservices/microservices-$image_name:latest"
     docker push "$REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/microservices/microservices-$image_name:latest"

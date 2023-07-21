@@ -25,3 +25,9 @@ variable "initial_words" {
   default     = ["function", "overcharge", "consensus", "pest", "related", "locate", "earwax", "refund", "lead", "stage"]
   description = "The initial set of words to store in the word service."
 }
+
+variable "enable_load_generator" {
+  type = bool
+  default = false
+  description = "Whether to deploy synthetic load against the production environment. If enabled, this can incur additional cost."
+}

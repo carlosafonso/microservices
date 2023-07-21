@@ -274,6 +274,8 @@ module "infra_staging" {
   enable_apis       = var.enable_apis
   enable_app_engine = var.enable_app_engine
   initial_words     = var.initial_words
+  # Load generation is intentionally disabled in staging.
+  enable_load_generator = false
 
   depends_on = [
     # We must wait until the Artifact Registry repository is created, because it
@@ -302,6 +304,8 @@ module "infra_prod" {
   enable_apis       = var.enable_apis
   enable_app_engine = var.enable_app_engine
   initial_words     = var.initial_words
+  # Load generation is enabled in prod depending on the user's settings.
+  enable_load_generator = var.enable_load_generator
 
   depends_on = [
     google_artifact_registry_repository.repo,

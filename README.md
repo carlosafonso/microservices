@@ -54,3 +54,9 @@ Refer to the following docs to understand how to run the demos:
 
 * [Autoscaling](docs/demo-autoscaling.md)
 * [Tracing](docs/demo-tracing.md)
+
+### About the load generator
+
+If the `enable_load_generator` parmaeter is set to `true`, a Cloud Scheduler trigger will run periodically triggering a Cloud Rub job (see [src/load-generator](src/load-generator) for reference). This job uses the Locust load generation tool to send a varying amount of requests across a given period of time, which should help demonstrating GCP's autoscaling capabilities.
+
+> **NOTE:** The load generation job currently only sends traffic to the Cloud Run stack. The GKE stack does not yet support load generation.
