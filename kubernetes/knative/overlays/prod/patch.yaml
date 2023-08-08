@@ -1,0 +1,29 @@
+- op: replace
+  path: /spec/template/spec/containers/0/env
+  value:
+    - name: MICROSERVICES_ENV
+      value: prod
+    - name: FONT_COLOR_SVC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-prod-font_color_run_svc_url
+    - name: FONT_SIZE_SVC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-prod-font_size_run_svc_url
+    - name: WORD_SVC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-prod-word_run_svc_url
+    - name: PUBSUB_EVENTS_TOPIC
+      valueFrom:
+        secretKeyRef:
+          key: latest
+          name: msvc-prod-pubsub_events_topic_name
+- op: add
+  path: /spec/template/spec/serviceAccountName
+  # This will be set by a local provisioner in Terraform
+  value: msvc-prod-frontend-svc@microservices-374513.iam.gserviceaccount.com
