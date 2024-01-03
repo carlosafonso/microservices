@@ -1,18 +1,15 @@
-FROM node:10-alpine
+# Build.
+FROM golang:1.21 as build
 
-# Create app directory
-WORKDIR /usr/src/app
+MAINTAINER "fonsi@google.com"
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
-COPY package*.json ./
-
-RUN npm ci --only=production
-
-# Bundle app source
+WORKDIR /go/src/app
 COPY . .
 
-EXPOSE 8080
+RUN go mod download
+RUN CGO_ENABLED=0 go build -o /go/bin/app
 
-CMD [ "node", "server.js" ]
+# Actual container image based on distroless.
+FROM gcr.io/distroless/static-debian11
+COPY --from=build /go/bin/app /
+CMD ["/app"]
