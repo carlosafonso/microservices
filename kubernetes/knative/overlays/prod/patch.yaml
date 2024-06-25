@@ -26,4 +26,4 @@
 - op: add
   path: /spec/template/spec/serviceAccountName
   # This will be set by a local provisioner in Terraform
-  value: msvc-prod-frontend-svc@microservices-374513.iam.gserviceaccount.com
+  value: msvc-prod-frontend-svc@fonsi-gcp-demos.iam.gserviceaccount.com
