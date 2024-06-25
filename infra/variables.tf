@@ -27,7 +27,7 @@ variable "initial_words" {
 }
 
 variable "enable_load_generator" {
-  type = bool
-  default = false
+  type        = bool
+  default     = false
   description = "Whether to deploy synthetic load against the production environment. If enabled, this can incur additional cost."
 }

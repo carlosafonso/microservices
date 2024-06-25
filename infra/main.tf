@@ -186,7 +186,7 @@ resource "google_clouddeploy_delivery_pipeline" "frontend_gke" {
             kubernetes {
               service_networking {
                 deployment = "frontend-prod"
-                service = "frontend-prod"
+                service    = "frontend-prod"
               }
             }
           }
