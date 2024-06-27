@@ -690,7 +690,7 @@ module "cloudscheduler_svc_acct_iam_member_roles" {
 resource "google_cloud_scheduler_job" "load_generator" {
   name             = "${local.base_name}-load-generator"
   description      = "${local.base_name} - Load generator"
-  schedule         = "*/30 * * * *"
+  schedule         = "0 * * * *"
   time_zone        = "UTC"
   attempt_deadline = "30s"
   paused = var.enable_load_generator ? false : true # Only enable the job if specified as a parameter.
