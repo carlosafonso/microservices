@@ -2,11 +2,11 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 4.65.2"
+      version = "~> 5.35.0"
     }
     google-beta = {
       source  = "hashicorp/google-beta"
-      version = "~> 4.65.2"
+      version = "~> 5.35.0"
     }
   }
 }
@@ -19,6 +19,24 @@ provider "google" {
 provider "google-beta" {
   project = var.gcp_project_id
   region  = var.gcp_region
+}
+
+# This folder will contain all projects and resources.
+resource "google_folder" "main" {
+  display_name = "microservices"
+  parent       = var.gcp_parent_node_id
+}
+
+module "environments" {
+  # https://stackoverflow.com/questions/58594506/how-to-for-each-through-a-listobjects-in-terraform-0-12
+  for_each = toset(var.envs)
+
+  source = "./modules/environment"
+
+  env                    = each.key
+  prefix                 = "msvc"
+  gcp_folder_id          = google_folder.main.id
+  gcp_billing_account_id = var.gcp_billing_account_id
 }
 
 # This module will ensure that all the necessary GCP APIs are enabled. You'll
