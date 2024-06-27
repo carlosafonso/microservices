@@ -651,16 +651,16 @@ resource "google_cloud_run_v2_job" "load_generator" {
 
     template {
       max_retries = 0
-      timeout = "3600s" # 1 hour.
+      timeout     = "3600s" # 1 hour.
       containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-load-generator:latest"
-        command = [ "locust", "--headless", "--only-summary", "-H", google_cloud_run_service.frontend.status[0].url ]
+        image   = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/microservices/microservices-load-generator:latest"
+        command = ["locust", "--headless", "--only-summary", "-H", google_cloud_run_service.frontend.status[0].url]
 
         resources {
           # The default config of 1 CPU / 512 MB causes the job to run out of
           # memory for some reason.
           limits = {
-            "cpu" = "1",
+            "cpu"    = "1",
             "memory" = "1Gi"
           }
         }
@@ -693,7 +693,7 @@ resource "google_cloud_scheduler_job" "load_generator" {
   schedule         = "0 * * * *"
   time_zone        = "UTC"
   attempt_deadline = "30s"
-  paused = var.enable_load_generator ? false : true # Only enable the job if specified as a parameter.
+  paused           = var.enable_load_generator ? false : true # Only enable the job if specified as a parameter.
 
   retry_config {
     retry_count = 0
