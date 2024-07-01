@@ -14,6 +14,9 @@ backend.tf
 
 ecs/processed.yaml
 
+# Cloud Code
+**/.vscode
+
 # Files that will be hydrated / populated via scripts
 kubernetes/base/frontend.yaml
 !kubernetes/base/frontend.yaml.dist
